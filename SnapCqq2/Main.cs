@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using WindowsInput;
 using WindowsInput.Native;
 
@@ -5,6 +6,16 @@ namespace SnapCqq2;
 
 public partial class Main : Form
 {
+    [DllImport("user32.dll")]
+    private static extern bool LockWorkStation();
+
+    private enum TimeoutAction
+    {
+        CloseApp,
+        LockAndClose,
+        DoNothing
+    }
+
     private readonly Random _rng = new();
 
     private readonly InputSimulator _simulator = new();
@@ -41,7 +52,10 @@ public partial class Main : Form
         PerformRandomAction();
 
         if (DateTime.Now >= _endTime)
-            StopAutomation(chkAutoClose.Checked);
+        {
+            var action = (TimeoutAction)cmbTimeoutAction.SelectedIndex;
+            StopAutomation(action);
+        }
     }
 
     private void updateTimer_Tick(object sender, EventArgs e)
@@ -83,17 +97,30 @@ public partial class Main : Form
         updateTimer.Start();
     }
 
-    private void StopAutomation(bool closeApp = false)
+    private void StopAutomation(TimeoutAction action = TimeoutAction.DoNothing)
     {
         actionTimer.Stop();
         updateTimer.Stop();
         _isRunning = false;
         btnStartStop.Text = "Start";
-        lblStatus.Text = closeApp ? "Closing…" : "Stopped";
         lblRemainingTime.Text = "";
         SetConfigEnabled(true);
 
-        if (closeApp) Close();
+        switch (action)
+        {
+            case TimeoutAction.CloseApp:
+                lblStatus.Text = "Closing…";
+                Close();
+                break;
+            case TimeoutAction.LockAndClose:
+                lblStatus.Text = "Locking and closing…";
+                LockWorkStation();
+                Close();
+                break;
+            case TimeoutAction.DoNothing:
+                lblStatus.Text = "Stopped";
+                break;
+        }
     }
 
     #endregion
@@ -166,7 +193,7 @@ public partial class Main : Form
     {
         numDuration.Enabled = enabled;
         numFrequency.Enabled = enabled;
-        chkAutoClose.Enabled = enabled;
+        cmbTimeoutAction.Enabled = enabled;
         chkMouseClick.Enabled = enabled;
         chkScrollLock.Enabled = enabled;
         chkArrowKeys.Enabled = enabled;

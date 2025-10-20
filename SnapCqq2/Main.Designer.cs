@@ -30,9 +30,10 @@ partial class Main
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
+        System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Main));
         numDuration = new System.Windows.Forms.NumericUpDown();
         label1 = new System.Windows.Forms.Label();
-        chkAutoClose = new System.Windows.Forms.CheckBox();
+        cmbTimeoutAction = new System.Windows.Forms.ComboBox();
         btnStartStop = new System.Windows.Forms.Button();
         lblStatus = new System.Windows.Forms.Label();
         actionTimer = new System.Windows.Forms.Timer(components);
@@ -69,15 +70,17 @@ partial class Main
         label1.Size = new System.Drawing.Size(41, 23);
         label1.TabIndex = 1;
         label1.Text = "min";
-        // 
-        // chkAutoClose
-        // 
-        chkAutoClose.Location = new System.Drawing.Point(200, 13);
-        chkAutoClose.Name = "chkAutoClose";
-        chkAutoClose.Size = new System.Drawing.Size(168, 24);
-        chkAutoClose.TabIndex = 4;
-        chkAutoClose.Text = "Close when finished";
-        chkAutoClose.UseVisualStyleBackColor = true;
+        //
+        // cmbTimeoutAction
+        //
+        cmbTimeoutAction.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+        cmbTimeoutAction.FormattingEnabled = true;
+        cmbTimeoutAction.Items.AddRange(new object[] { "Close when finished", "Lock window", "Do nothing" });
+        cmbTimeoutAction.Location = new System.Drawing.Point(200, 12);
+        cmbTimeoutAction.Name = "cmbTimeoutAction";
+        cmbTimeoutAction.Size = new System.Drawing.Size(168, 28);
+        cmbTimeoutAction.TabIndex = 4;
+        cmbTimeoutAction.SelectedIndex = 0;
         // 
         // btnStartStop
         // 
@@ -103,7 +106,7 @@ partial class Main
         lblStatus.Text = "Idle";
         // 
         // actionTimer
-        //
+        // 
         actionTimer.Tick += actionTimer_Tick;
         // 
         // updateTimer
@@ -229,9 +232,10 @@ partial class Main
         Controls.Add(lblRemainingTime);
         Controls.Add(lblStatus);
         Controls.Add(btnStartStop);
-        Controls.Add(chkAutoClose);
+        Controls.Add(cmbTimeoutAction);
         Controls.Add(label1);
         Controls.Add(numDuration);
+        Icon = ((System.Drawing.Icon)resources.GetObject("$this.Icon"));
         StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
         Text = "SnapCqq2";
         ((System.ComponentModel.ISupportInitialize)numDuration).EndInit();
@@ -253,7 +257,7 @@ partial class Main
     private System.Windows.Forms.Label lblRemainingTime;
     private System.Windows.Forms.Label lblStatus;
     private System.Windows.Forms.Button btnStartStop;
-    private System.Windows.Forms.CheckBox chkAutoClose;
+    private System.Windows.Forms.ComboBox cmbTimeoutAction;
     private System.Windows.Forms.Label label1;
     private System.Windows.Forms.NumericUpDown numDuration;
     private System.Windows.Forms.Label lblActions;
