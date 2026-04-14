@@ -1,6 +1,8 @@
 using System.Runtime.InteropServices;
 using WindowsInput;
 using WindowsInput.Native;
+using SnapCqq2.Models;
+using SnapCqq2.Services;
 
 namespace SnapCqq2;
 
@@ -9,311 +11,658 @@ public partial class Main : Form
     [DllImport("user32.dll")]
     private static extern bool LockWorkStation();
 
-    private enum TimeoutAction
-    {
-        CloseApp,
-        LockAndClose,
-        ShutdownWindows,
-        DoNothing
-    }
+    // ── Card height constants ──────────────────────────────────────
+    private const int CardHeaderH    = 28;
+    private const int WhenBodyH      = 104;
+    private const int HowBodyH       = 68;
+    private const int AfterBodyH     = 39;
+    private const int RunBodyH       = 70;
+    private const int ManualHowBodyH = 68;
+    private const int CardGap        = 6;
+    private const int TabPadding     = 8;
 
-    private enum AppState { Idle, WaitingToStart, Running }
+    // ── State ──────────────────────────────────────────────────────
+    private enum AutoState   { Disabled, Armed, Running }
+    private enum ManualState { Idle, WaitingToStart, Running }
 
-    private readonly Random _rng = new();
+    private AutoState   _autoState   = AutoState.Disabled;
+    private ManualState _manualState = ManualState.Idle;
+
+    private bool _howExpanded       = false;
+    private bool _afterExpanded     = false;
+    private bool _manualHowExpanded = false;
+
+    private DateTime _manualEndTime;
+    private DateTime _manualDelayEnd;
+
+    private bool _loading = false; // suppresses save-on-change handlers during UI population
+
+    // ── Services ───────────────────────────────────────────────────
+    private AppSettings _settings = new();
     private readonly InputSimulator _simulator = new();
+    private readonly Random _rng = new();
 
-    private AppState _state = AppState.Idle;
-    private DateTime _endTime;
-    private DateTime _delayEndTime;
-
-    private NotifyIcon _trayIcon = null!;
+    // ── Tray ───────────────────────────────────────────────────────
+    private NotifyIcon      _trayIcon = null!;
     private ContextMenuStrip _trayMenu = null!;
 
-    private bool _optionsExpanded = false;
-    private const int CollapsedHeight = 125;
-    private const int ExpandedHeight = 235;
-
-    #region Constructor
+    // ────────────────────────────────────────────────────────────────
+    #region Init
 
     public Main()
     {
         InitializeComponent();
+        BuildUI();
         SetupTrayIcon();
-        ValidateActionSelection();
+        _settings = SettingsManager.Load();
+        LoadSettingsToUI();
+        RelayoutAutoCards();
+        WireEvents();
+        UpdateStatusBar();
+
+        if (_settings.StartMinimized)
+            Load += (_, _) => HideToTray();
+    }
+
+    private void WireEvents()
+    {
+        // Card toggles — wire both the header panel AND the label inside it,
+        // because WinForms labels consume click events and don't propagate to parent.
+        pnlHowHeader.Click       += (_, _) => ToggleCard(ref _howExpanded,       pnlHowBody,       lblHowTitle,       "⚡ How",                RelayoutAutoCards);
+        lblHowTitle.Click        += (_, _) => ToggleCard(ref _howExpanded,       pnlHowBody,       lblHowTitle,       "⚡ How",                RelayoutAutoCards);
+        pnlAfterHeader.Click     += (_, _) => ToggleCard(ref _afterExpanded,     pnlAfterBody,     lblAfterTitle,     "🔚 After schedule ends", RelayoutAutoCards);
+        lblAfterTitle.Click      += (_, _) => ToggleCard(ref _afterExpanded,     pnlAfterBody,     lblAfterTitle,     "🔚 After schedule ends", RelayoutAutoCards);
+        pnlManualHowHeader.Click += (_, _) => ToggleCard(ref _manualHowExpanded, pnlManualHowBody, lblManualHowTitle, "⚡ How",                RelayoutManualCards);
+        lblManualHowTitle.Click  += (_, _) => ToggleCard(ref _manualHowExpanded, pnlManualHowBody, lblManualHowTitle, "⚡ How",                RelayoutManualCards);
+
+        // Tab switch
+        tabControl.SelectedIndexChanged += TabControl_SelectedIndexChanged;
+
+        // Action button (Enable/Disable or Start/Stop)
+        btnAction.Click += BtnAction_Click;
+
+        // Auto settings
+        for (int i = 0; i < 7; i++) btnDay[i].Click += DayBtn_Click;
+        dtpWorkStart.ValueChanged          += AutoSetting_Changed;
+        dtpWorkEnd.ValueChanged            += AutoSetting_Changed;
+        dtpBreakStart.ValueChanged         += AutoSetting_Changed;
+        dtpBreakEnd.ValueChanged           += AutoSetting_Changed;
+        numIdleThreshold.ValueChanged      += AutoSetting_Changed;
+        chkStopOnReturn.CheckedChanged     += AutoSetting_Changed;
+        chkScrollLock.CheckedChanged       += AutoSetting_Changed;
+        chkMouseClick.CheckedChanged       += AutoSetting_Changed;
+        chkArrowKeys.CheckedChanged        += AutoSetting_Changed;
+        numFrequency.ValueChanged          += AutoSetting_Changed;
+        cmbAutoTimeout.SelectedIndexChanged += AutoSetting_Changed;
+
+        // Manual settings
+        numDuration.ValueChanged              += ManualSetting_Changed;
+        numDelay.ValueChanged                 += ManualSetting_Changed;
+        cmbManualTimeout.SelectedIndexChanged += ManualSetting_Changed;
+        chkManualScrollLock.CheckedChanged    += ManualSetting_Changed;
+        chkManualMouseClick.CheckedChanged    += ManualSetting_Changed;
+        chkManualArrowKeys.CheckedChanged     += ManualSetting_Changed;
+        numManualFrequency.ValueChanged       += ManualSetting_Changed;
+
+        // General settings
+        chkLaunchOnStartup.CheckedChanged   += GeneralSetting_Changed;
+        chkStartMinimized.CheckedChanged    += GeneralSetting_Changed;
+        cmbDefaultMode.SelectedIndexChanged += GeneralSetting_Changed;
+
+        // Tray
+        _trayIcon.MouseClick += (_, e) => { if (e.Button == MouseButtons.Left) ShowForm(); };
+
+        // Timers
+        idleCheckTimer.Tick += IdleCheckTimer_Tick;
+        actionTimer.Tick    += ActionTimer_Tick;
+        updateTimer.Tick    += UpdateTimer_Tick;
+        delayTimer.Tick     += DelayTimer_Tick;
     }
 
     #endregion
 
-    #region Tray Icon Setup
+    // ────────────────────────────────────────────────────────────────
+    #region Settings load/save
 
-    private void SetupTrayIcon()
+    private void LoadSettingsToUI()
     {
-        _trayMenu = new ContextMenuStrip();
-        _trayMenu.Items.Add("Show", null, TrayMenuShow_Click);
-        _trayMenu.Items.Add("Exit", null, TrayMenuExit_Click);
-
-        _trayIcon = new NotifyIcon
+        _loading = true;
+        try
         {
-            Icon = this.Icon,
-            Text = "SnapCqq2",
-            ContextMenuStrip = _trayMenu,
-            Visible = false
+            for (int i = 0; i < 7; i++)
+                SetDayButtonState(btnDay[i], _settings.ActiveDays[i]);
+
+            dtpWorkStart.Value  = DateTime.Today + _settings.WorkStart.ToTimeSpan();
+            dtpWorkEnd.Value    = DateTime.Today + _settings.WorkEnd.ToTimeSpan();
+            dtpBreakStart.Value = DateTime.Today + _settings.BreakStart.ToTimeSpan();
+            dtpBreakEnd.Value   = DateTime.Today + _settings.BreakEnd.ToTimeSpan();
+
+            numIdleThreshold.Value  = _settings.IdleThresholdMinutes;
+            chkStopOnReturn.Checked = _settings.StopWhenUserReturns;
+
+            // Actions — shared; populate both Auto and Manual HOW cards
+            chkScrollLock.Checked = chkManualScrollLock.Checked = _settings.UseScrollLock;
+            chkMouseClick.Checked = chkManualMouseClick.Checked = _settings.UseMouseClick;
+            chkArrowKeys.Checked  = chkManualArrowKeys.Checked  = _settings.UseArrowKeys;
+            numFrequency.Value = numManualFrequency.Value = _settings.FrequencyMinutes;
+
+            cmbAutoTimeout.SelectedIndex = _settings.AutoTimeoutAction switch
+            {
+                TimeoutAction.LockAndClose    => 1,
+                TimeoutAction.ShutdownWindows => 2,
+                _                             => 0  // DoNothing (CloseApp also falls back to DoNothing)
+            };
+            numDuration.Value               = _settings.ManualDurationMinutes;
+            numDelay.Value                  = _settings.ManualDelayMinutes;
+            cmbManualTimeout.SelectedIndex = _settings.ManualTimeoutAction switch
+            {
+                TimeoutAction.LockAndClose    => 1,
+                TimeoutAction.ShutdownWindows => 2,
+                TimeoutAction.DoNothing       => 3,
+                _                             => 0  // CloseApp = "Close when finished"
+            };
+
+            chkLaunchOnStartup.Checked  = StartupManager.IsEnabled();
+            chkStartMinimized.Checked   = _settings.StartMinimized;
+            cmbDefaultMode.SelectedIndex = _settings.DefaultMode == "Manual" ? 1 : 0;
+
+            tabControl.SelectedTab = _settings.DefaultMode == "Manual" ? tabManual : tabAuto;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private void SaveFromAutoUI()
+    {
+        for (int i = 0; i < 7; i++)
+            _settings.ActiveDays[i] = btnDay[i].Tag is true;
+
+        _settings.WorkStart  = TimeOnly.FromDateTime(dtpWorkStart.Value);
+        _settings.WorkEnd    = TimeOnly.FromDateTime(dtpWorkEnd.Value);
+        _settings.BreakStart = TimeOnly.FromDateTime(dtpBreakStart.Value);
+        _settings.BreakEnd   = TimeOnly.FromDateTime(dtpBreakEnd.Value);
+
+        _settings.IdleThresholdMinutes = (int)numIdleThreshold.Value;
+        _settings.StopWhenUserReturns  = chkStopOnReturn.Checked;
+        _settings.UseScrollLock        = chkScrollLock.Checked;
+        _settings.UseMouseClick        = chkMouseClick.Checked;
+        _settings.UseArrowKeys         = chkArrowKeys.Checked;
+        _settings.FrequencyMinutes     = (int)numFrequency.Value;
+        _settings.AutoTimeoutAction = cmbAutoTimeout.SelectedIndex switch
+        {
+            1 => TimeoutAction.LockAndClose,
+            2 => TimeoutAction.ShutdownWindows,
+            _ => TimeoutAction.DoNothing
         };
-        _trayIcon.MouseClick += TrayIcon_MouseClick;
+
+        SettingsManager.Save(_settings);
+    }
+
+    private void SaveFromManualUI()
+    {
+        _settings.ManualDurationMinutes = (int)numDuration.Value;
+        _settings.ManualDelayMinutes    = (int)numDelay.Value;
+        _settings.ManualTimeoutAction = cmbManualTimeout.SelectedIndex switch
+        {
+            1 => TimeoutAction.LockAndClose,
+            2 => TimeoutAction.ShutdownWindows,
+            3 => TimeoutAction.DoNothing,
+            _ => TimeoutAction.CloseApp  // 0 = "Close when finished"
+        };
+        _settings.UseScrollLock         = chkManualScrollLock.Checked;
+        _settings.UseMouseClick         = chkManualMouseClick.Checked;
+        _settings.UseArrowKeys          = chkManualArrowKeys.Checked;
+        _settings.FrequencyMinutes      = (int)numManualFrequency.Value;
+
+        // Sync shared action settings back to Auto HOW controls
+        _loading = true;
+        chkScrollLock.Checked = _settings.UseScrollLock;
+        chkMouseClick.Checked = _settings.UseMouseClick;
+        chkArrowKeys.Checked  = _settings.UseArrowKeys;
+        numFrequency.Value    = _settings.FrequencyMinutes;
+        _loading = false;
+
+        SettingsManager.Save(_settings);
+    }
+
+    private void AutoSetting_Changed(object? sender, EventArgs e)
+    {
+        if (_loading) return;
+        SaveFromAutoUI();
+        if (_autoState == AutoState.Armed)
+            idleCheckTimer.Interval = IdleDetector.ComputePollIntervalMs(_settings.IdleThresholdMinutes);
+    }
+
+    private void ManualSetting_Changed(object? sender, EventArgs e)
+    {
+        if (_loading) return;
+        SaveFromManualUI();
+    }
+
+    private void GeneralSetting_Changed(object? sender, EventArgs e)
+    {
+        if (_loading) return;
+        StartupManager.Sync(chkLaunchOnStartup.Checked);
+        _settings.StartMinimized = chkStartMinimized.Checked;
+        _settings.DefaultMode    = cmbDefaultMode.SelectedIndex == 1 ? "Manual" : "Auto";
+        SettingsManager.Save(_settings);
     }
 
     #endregion
 
-    #region Event Handlers
+    // ────────────────────────────────────────────────────────────────
+    #region Day buttons
 
-    private void btnStartStop_Click(object sender, EventArgs e)
+    private void DayBtn_Click(object? sender, EventArgs e)
     {
-        if (_state == AppState.Running)
+        if (sender is not Button btn) return;
+        bool current = btn.Tag is true;
+        SetDayButtonState(btn, !current);
+        if (!_loading) SaveFromAutoUI();
+    }
+
+    private static void SetDayButtonState(Button btn, bool active)
+    {
+        btn.Tag       = active;
+        btn.BackColor = active ? Color.FromArgb(46, 125, 50) : Color.FromArgb(228, 228, 228);
+        btn.ForeColor = active ? Color.White : Color.FromArgb(85, 85, 85);
+    }
+
+    #endregion
+
+    // ────────────────────────────────────────────────────────────────
+    #region Card layout
+
+    private void ToggleCard(ref bool state, Panel body, Label title, string baseText, Action relayout)
+    {
+        state      = !state;
+        body.Visible = state;
+        title.Text = (state ? "▼ " : "▶ ") + baseText;
+        relayout();
+    }
+
+    private void RelayoutAutoCards()
+    {
+        int y = TabPadding;
+        int w = tabAuto.ClientSize.Width - TabPadding * 2;
+        if (w <= 0) w = 548; // fallback before form is shown
+
+        pnlWhen.SetBounds(TabPadding, y, w, CardHeaderH + WhenBodyH);
+        y += pnlWhen.Height + CardGap;
+
+        pnlHow.SetBounds(TabPadding, y, w, CardHeaderH + (_howExpanded ? HowBodyH : 0));
+        y += pnlHow.Height + CardGap;
+
+        pnlAfter.SetBounds(TabPadding, y, w, CardHeaderH + (_afterExpanded ? AfterBodyH : 0));
+        y += pnlAfter.Height + TabPadding;
+
+        ResizeFormToContent(y);
+    }
+
+    private void RelayoutManualCards()
+    {
+        int y = TabPadding;
+        int w = tabManual.ClientSize.Width - TabPadding * 2;
+        if (w <= 0) w = 548;
+
+        pnlRun.SetBounds(TabPadding, y, w, CardHeaderH + RunBodyH);
+        y += pnlRun.Height + CardGap;
+
+        pnlManualHow.SetBounds(TabPadding, y, w, CardHeaderH + (_manualHowExpanded ? ManualHowBodyH : 0));
+        y += pnlManualHow.Height + TabPadding;
+
+        ResizeFormToContent(y);
+    }
+
+    private void ResizeFormToContent(int tabContentHeight)
+    {
+        // tabControl.Top is 0 (Dock=Fill minus Dock=Bottom status bar)
+        // The tab strip occupies some pixels above the tab page client area.
+        // We measure it accurately once the form is visible; use a constant until then.
+        int tabStripH = _tabStripH > 0 ? _tabStripH : 28;
+        ClientSize = new Size(ClientSize.Width, tabStripH + tabContentHeight + pnlStatusBar.Height);
+    }
+
+    private int _tabStripH = 0;
+
+    protected override void OnShown(EventArgs e)
+    {
+        base.OnShown(e);
+        // Measure actual tab strip height now that the form is rendered
+        _tabStripH = tabControl.Height - tabAuto.Height;
+        // Fix action button position: Anchor=Right is computed from the panel's size
+        // at InitializeComponent time (before layout), which may be wrong.
+        // Reposition explicitly once the panel has its real width.
+        btnAction.Left = pnlStatusMain.ClientSize.Width - btnAction.Width - 8;
+        // Re-layout with accurate measurement
+        if (tabControl.SelectedTab == tabAuto)   RelayoutAutoCards();
+        if (tabControl.SelectedTab == tabManual) RelayoutManualCards();
+    }
+
+    private void TabControl_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        if (tabControl.SelectedTab == tabAuto)   RelayoutAutoCards();
+        if (tabControl.SelectedTab == tabManual) RelayoutManualCards();
+        UpdateStatusBar();
+    }
+
+    #endregion
+
+    // ────────────────────────────────────────────────────────────────
+    #region Auto mode state machine
+
+    private void BtnAction_Click(object? sender, EventArgs e)
+    {
+        if (tabControl.SelectedTab == tabAuto)
+        {
+            if (_autoState == AutoState.Disabled) ArmAuto();
+            else DisarmAuto();
+        }
+        else if (tabControl.SelectedTab == tabManual)
+        {
+            if (_manualState == ManualState.Idle) StartManual();
+            else StopManual();
+        }
+    }
+
+    private void ArmAuto()
+    {
+        _autoState = AutoState.Armed;
+        idleCheckTimer.Interval = IdleDetector.ComputePollIntervalMs(_settings.IdleThresholdMinutes);
+        idleCheckTimer.Start();
+        UpdateStatusBar();
+        var trayStatus = ScheduleChecker.IsInActiveWindow(_settings, DateTime.Now)
+            ? "Armed · Watching for idle"
+            : ScheduleChecker.NextWindowDescription(_settings, DateTime.Now);
+        _trayIcon.Text = Truncate(trayStatus, 63);
+        HideToTray();
+    }
+
+    private void DisarmAuto()
+    {
+        if (_autoState == AutoState.Running) StopAutomation();
+        _autoState = AutoState.Disabled;
+        idleCheckTimer.Stop();
+        UpdateStatusBar();
+        ShowForm();
+    }
+
+    private void IdleCheckTimer_Tick(object? sender, EventArgs e)
+    {
+        if (!ScheduleChecker.IsInActiveWindow(_settings, DateTime.Now))
+        {
+            if (_autoState == AutoState.Running)
+            {
+                StopAutomation();
+                ApplyAutoTimeout();
+                _autoState = AutoState.Armed;
+                UpdateStatusBar();
+            }
+            var desc = ScheduleChecker.NextWindowDescription(_settings, DateTime.Now);
+            _trayIcon.Text = Truncate($"Armed · {desc}", 63);
+            return;
+        }
+
+        var idle      = IdleDetector.GetIdleTime();
+        var threshold = TimeSpan.FromMinutes(_settings.IdleThresholdMinutes);
+
+        if (_autoState == AutoState.Armed && idle >= threshold)
+        {
+            _autoState = AutoState.Running;
+            StartAutomation();
+            UpdateStatusBar();
+        }
+        else if (_autoState == AutoState.Running && _settings.StopWhenUserReturns && idle < threshold)
         {
             StopAutomation();
-            TransitionTo(AppState.Idle);
+            _autoState = AutoState.Armed;
+            _trayIcon.Text = Truncate("Armed · Watching for idle", 63);
+            UpdateStatusBar();
         }
-        else if (_state == AppState.Idle)
+        else if (_autoState == AutoState.Armed)
         {
-            TransitionTo(numDelay.Value > 0 ? AppState.WaitingToStart : AppState.Running);
+            _trayIcon.Text = Truncate("Armed · Watching for idle", 63);
         }
     }
 
-    private void btnStartNow_Click(object sender, EventArgs e)
+    private void ApplyAutoTimeout()
     {
-        TransitionTo(AppState.Running);
-    }
-
-    private void btnCancel_Click(object sender, EventArgs e)
-    {
-        TransitionTo(AppState.Idle);
-    }
-
-    private void ActionCheckBox_CheckedChanged(object sender, EventArgs e)
-    {
-        ValidateActionSelection();
-    }
-
-    private void actionTimer_Tick(object sender, EventArgs e)
-    {
-        if (DateTime.Now >= _endTime)
+        switch (_settings.AutoTimeoutAction)
         {
-            var action = (TimeoutAction)cmbTimeoutAction.SelectedIndex;
-            StopAutomation(action);
-            if (action != TimeoutAction.CloseApp && action != TimeoutAction.LockAndClose)
-                TransitionTo(AppState.Idle);
+            case TimeoutAction.LockAndClose:    LockWorkStation(); break;
+            case TimeoutAction.ShutdownWindows: System.Diagnostics.Process.Start("shutdown", "/s /t 0"); break;
+            // DoNothing and CloseApp (legacy): stay armed, do nothing
+        }
+    }
+
+    #endregion
+
+    // ────────────────────────────────────────────────────────────────
+    #region Manual mode state machine
+
+    private void StartManual()
+    {
+        if (_settings.ManualDelayMinutes > 0)
+        {
+            _manualState    = ManualState.WaitingToStart;
+            _manualDelayEnd = DateTime.Now.AddMinutes(_settings.ManualDelayMinutes);
+            delayTimer.Start();
+        }
+        else
+        {
+            _manualState = ManualState.Running;
+            BeginManualRun();
+        }
+        UpdateStatusBar();
+        HideToTray();
+    }
+
+    private void StopManual(TimeoutAction action = TimeoutAction.DoNothing)
+    {
+        actionTimer.Stop();
+        updateTimer.Stop();
+        delayTimer.Stop();
+        _manualState = ManualState.Idle;
+        UpdateStatusBar();
+
+        switch (action)
+        {
+            case TimeoutAction.CloseApp:        Close(); return;
+            case TimeoutAction.LockAndClose:    LockWorkStation(); Close(); return;
+            case TimeoutAction.ShutdownWindows: System.Diagnostics.Process.Start("shutdown", "/s /t 0"); return;
+        }
+        ShowForm();
+    }
+
+    private void BeginManualRun()
+    {
+        _manualEndTime         = DateTime.Now.AddMinutes(_settings.ManualDurationMinutes);
+        actionTimer.Interval   = _settings.FrequencyMinutes * 60_000;
+        actionTimer.Start();
+        updateTimer.Start();
+    }
+
+    private void DelayTimer_Tick(object? sender, EventArgs e)
+    {
+        if (DateTime.Now >= _manualDelayEnd)
+        {
+            delayTimer.Stop();
+            _manualState = ManualState.Running;
+            BeginManualRun();
+            UpdateStatusBar();
+        }
+        else
+        {
+            var rem = _manualDelayEnd - DateTime.Now;
+            _trayIcon.Text = Truncate($"Starting in {rem:hh\\:mm\\:ss}", 63);
+        }
+    }
+
+    private void ActionTimer_Tick(object? sender, EventArgs e)
+    {
+        if (_manualState == ManualState.Running && DateTime.Now >= _manualEndTime)
+        {
+            var action = _settings.ManualTimeoutAction;
+            StopManual(action);
             return;
         }
         PerformRandomAction();
     }
 
-    private void updateTimer_Tick(object sender, EventArgs e)
+    private void UpdateTimer_Tick(object? sender, EventArgs e)
     {
-        if (_state != AppState.Running) return;
-
-        var remaining = _endTime - DateTime.Now;
-        var ts = remaining.TotalSeconds > 0 ? remaining : TimeSpan.Zero;
-        var display = $"{ts.Hours:D2}:{ts.Minutes:D2}:{ts.Seconds:D2}";
-        lblRemainingTime.Text = $"Time remaining: {display}";
-
-        var trayText = $"Running - {display} remaining";
-        _trayIcon.Text = trayText.Length > 63 ? trayText[..63] : trayText;
-    }
-
-    private void delayTimer_Tick(object sender, EventArgs e)
-    {
-        var remaining = _delayEndTime - DateTime.Now;
-        if (remaining.TotalSeconds <= 0)
-        {
-            TransitionTo(AppState.Running);
-            return;
-        }
-        var display = $"{remaining.Hours:D2}:{remaining.Minutes:D2}:{remaining.Seconds:D2}";
-        var trayText = $"Starting in {display}";
-        _trayIcon.Text = trayText.Length > 63 ? trayText[..63] : trayText;
-    }
-
-    private void lblToggleOptions_Click(object sender, EventArgs e)
-    {
-        SetOptionsExpanded(!_optionsExpanded);
-    }
-
-    private void TrayIcon_MouseClick(object? sender, MouseEventArgs e)
-    {
-        if (e.Button == MouseButtons.Left)
-            ShowForm();
-    }
-
-    private void TrayMenuShow_Click(object? sender, EventArgs e) => ShowForm();
-
-    private void TrayMenuExit_Click(object? sender, EventArgs e) => Application.Exit();
-
-    protected override void OnResize(EventArgs e)
-    {
-        base.OnResize(e);
-        if (WindowState == FormWindowState.Minimized && _state != AppState.Idle)
-            HideToTray();
-    }
-
-    protected override void OnFormClosed(FormClosedEventArgs e)
-    {
-        actionTimer?.Dispose();
-        updateTimer?.Dispose();
-        delayTimer?.Dispose();
-        _trayIcon?.Dispose();
-        base.OnFormClosed(e);
+        if (_manualState != ManualState.Running) return;
+        var rem = _manualEndTime - DateTime.Now;
+        var ts  = rem.TotalSeconds > 0 ? rem : TimeSpan.Zero;
+        lblStatusText.Text = $"Running — {ts:hh\\:mm\\:ss} remaining";
+        _trayIcon.Text     = Truncate(lblStatusText.Text, 63);
     }
 
     #endregion
 
-    #region State Machine
+    // ────────────────────────────────────────────────────────────────
+    #region Automation actions
 
-    private void TransitionTo(AppState newState)
+    private void StartAutomation()
     {
-        _state = newState;
-
-        switch (newState)
-        {
-            case AppState.Idle:
-                actionTimer.Stop();
-                updateTimer.Stop();
-                delayTimer.Stop();
-                SetConfigEnabled(true);
-                ShowForm();
-                break;
-
-            case AppState.WaitingToStart:
-                _delayEndTime = DateTime.Now.AddMinutes((double)numDelay.Value);
-                SetConfigEnabled(false);
-                delayTimer.Start();
-                HideToTray();
-                break;
-
-            case AppState.Running:
-                delayTimer.Stop();
-                _endTime = DateTime.Now.AddMinutes((double)numDuration.Value);
-                actionTimer.Interval = (int)((double)numFrequency.Value * 60 * 1_000);
-                actionTimer.Start();
-                updateTimer.Start();
-                HideToTray();
-                break;
-        }
-
-        UpdateUIForState();
-        ValidateActionSelection();
+        PerformRandomAction(); // act immediately — don't make the user wait a full frequency cycle
+        actionTimer.Interval = _settings.FrequencyMinutes * 60_000;
+        actionTimer.Start();
+        _trayIcon.Text = Truncate("Active — automating", 63);
+        // updateTimer intentionally NOT started — no countdown in auto mode
     }
 
-    private void UpdateUIForState()
-    {
-        bool isWaiting = _state == AppState.WaitingToStart;
-        bool isRunning = _state == AppState.Running;
-
-        btnStartStop.Visible = !isWaiting;
-        btnStartStop.Text = isRunning ? "Stop" : "Start";
-        btnStartStop.BackColor = isRunning
-            ? System.Drawing.Color.FromArgb(183, 28, 28)
-            : System.Drawing.Color.FromArgb(46, 125, 50);
-
-        btnStartNow.Visible = isWaiting;
-        btnCancel.Visible = isWaiting;
-
-        switch (_state)
-        {
-            case AppState.Idle:
-                lblRemainingTime.Text = "Start app to see remaining time";
-                lblStatus.Text = "Idle";
-                break;
-            case AppState.WaitingToStart:
-                lblRemainingTime.Text = "Waiting to start…";
-                lblStatus.Text = $"Will start at {_delayEndTime:T}";
-                break;
-            case AppState.Running:
-                lblStatus.Text = $"Running… (stops at {_endTime:T})";
-                break;
-        }
-    }
-
-    #endregion
-
-    #region Automation Control
-
-    private void StopAutomation(TimeoutAction action = TimeoutAction.DoNothing)
+    private void StopAutomation()
     {
         actionTimer.Stop();
-        updateTimer.Stop();
-
-        switch (action)
-        {
-            case TimeoutAction.CloseApp:
-                Close();
-                break;
-            case TimeoutAction.LockAndClose:
-                LockWorkStation();
-                Close();
-                break;
-            case TimeoutAction.ShutdownWindows:
-                System.Diagnostics.Process.Start("shutdown", "/s /t 0");
-                break;
-        }
+        updateTimer.Stop(); // defensive
     }
-
-    #endregion
-
-    #region Action Execution
 
     private void PerformRandomAction()
     {
         var actions = new List<Action>();
-
-        if (chkMouseClick.Checked)
-            actions.Add(PerformMouseClick);
-
-        if (chkScrollLock.Checked)
-            actions.Add(PerformScrollLock);
-
-        if (chkArrowKeys.Checked)
-            actions.Add(PerformArrowKey);
-
-        if (actions.Count == 0)
-        {
-            lblStatus.Text = $"[{DateTime.Now:T}] No actions enabled";
-            return;
-        }
-
+        if (_settings.UseScrollLock) actions.Add(PerformScrollLock);
+        if (_settings.UseMouseClick) actions.Add(PerformMouseClick);
+        if (_settings.UseArrowKeys)  actions.Add(PerformArrowKey);
+        if (actions.Count == 0) return;
         actions[_rng.Next(actions.Count)]();
-    }
-
-    private void PerformMouseClick()
-    {
-        _simulator.Mouse.LeftButtonClick();
-        lblStatus.Text = $"[{DateTime.Now:T}] Mouse click";
     }
 
     private void PerformScrollLock()
     {
         _simulator.Keyboard.KeyPress(VirtualKeyCode.SCROLL);
         _simulator.Keyboard.KeyPress(VirtualKeyCode.SCROLL);
-        lblStatus.Text = $"[{DateTime.Now:T}] Scroll-lock toggle";
+        LogAction("Scroll-lock toggle");
+    }
+
+    private void PerformMouseClick()
+    {
+        _simulator.Mouse.LeftButtonClick();
+        LogAction("Mouse click");
     }
 
     private void PerformArrowKey()
     {
-        VirtualKeyCode[] arrows =
-        [
-            VirtualKeyCode.UP,
-            VirtualKeyCode.DOWN,
-            VirtualKeyCode.LEFT,
-            VirtualKeyCode.RIGHT
-        ];
-
+        VirtualKeyCode[] arrows = [VirtualKeyCode.UP, VirtualKeyCode.DOWN, VirtualKeyCode.LEFT, VirtualKeyCode.RIGHT];
         var key = arrows[_rng.Next(arrows.Length)];
         _simulator.Keyboard.KeyPress(key);
-        lblStatus.Text = $"[{DateTime.Now:T}] Arrow key: {key}";
+        LogAction($"Arrow key: {key}");
+    }
+
+    private void LogAction(string msg) =>
+        lblLastAction.Text = $"[{DateTime.Now:T}] {msg}";
+
+    #endregion
+
+    // ────────────────────────────────────────────────────────────────
+    #region Status bar
+
+    private void UpdateStatusBar()
+    {
+        if (tabControl.SelectedTab == tabAuto)
+        {
+            switch (_autoState)
+            {
+                case AutoState.Disabled:
+                    SetStatus(Color.Gray,
+                        "Disabled", "Click Enable to arm the scheduler",
+                        "Enable", Color.FromArgb(46, 125, 50));
+                    break;
+
+                case AutoState.Armed:
+                    var inWindow = ScheduleChecker.IsInActiveWindow(_settings, DateTime.Now);
+                    var sub = inWindow
+                        ? "Within schedule — watching for idle"
+                        : ScheduleChecker.NextWindowDescription(_settings, DateTime.Now);
+                    SetStatus(Color.FromArgb(245, 127, 23), "Monitoring", sub,
+                        "Disable", Color.FromArgb(183, 28, 28));
+                    break;
+
+                case AutoState.Running:
+                    SetStatus(Color.FromArgb(46, 125, 50), "Active — automating", "User is idle",
+                        "Disable", Color.FromArgb(183, 28, 28));
+                    break;
+            }
+        }
+        else if (tabControl.SelectedTab == tabManual)
+        {
+            switch (_manualState)
+            {
+                case ManualState.Idle:
+                    SetStatus(Color.Gray, "Idle", "Ready to start",
+                        "Start", Color.FromArgb(46, 125, 50));
+                    break;
+
+                case ManualState.WaitingToStart:
+                    SetStatus(Color.FromArgb(245, 127, 23), "Waiting",
+                        $"Starting at {_manualDelayEnd:T}",
+                        "Stop", Color.FromArgb(183, 28, 28));
+                    break;
+
+                case ManualState.Running:
+                    SetStatus(Color.FromArgb(46, 125, 50), "Running",
+                        $"Until {_manualEndTime:T}",
+                        "Stop", Color.FromArgb(183, 28, 28));
+                    break;
+            }
+        }
+        else
+        {
+            SetStatus(Color.Gray, string.Empty, string.Empty, string.Empty, Color.Gray);
+        }
+    }
+
+    private void SetStatus(Color dotColor, string text, string sub, string btnLabel, Color btnColor)
+    {
+        lblDot.ForeColor    = dotColor;
+        lblStatusText.Text  = text;
+        lblStatusSub.Text   = sub;
+        btnAction.Text      = btnLabel;
+        btnAction.BackColor = btnColor;
+        btnAction.Visible   = btnLabel.Length > 0;
     }
 
     #endregion
 
-    #region Tray Helpers
+    // ────────────────────────────────────────────────────────────────
+    #region Tray & window lifecycle
+
+    private void SetupTrayIcon()
+    {
+        _trayMenu = new ContextMenuStrip();
+        _trayMenu.Items.Add("Show", null, (_, _) => ShowForm());
+        _trayMenu.Items.Add("Exit", null, (_, _) => Application.Exit());
+
+        _trayIcon = new NotifyIcon
+        {
+            Icon             = Icon,
+            Text             = "SnapCqq2",
+            ContextMenuStrip = _trayMenu,
+            Visible          = false
+        };
+    }
 
     private void HideToTray()
     {
@@ -329,36 +678,32 @@ public partial class Main : Form
         _trayIcon.Visible = false;
     }
 
+    protected override void OnResize(EventArgs e)
+    {
+        base.OnResize(e);
+        bool autoArmed  = _autoState != AutoState.Disabled;
+        bool manualBusy = _manualState != ManualState.Idle;
+        if (WindowState == FormWindowState.Minimized && (autoArmed || manualBusy))
+            HideToTray();
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        idleCheckTimer?.Dispose();
+        actionTimer?.Dispose();
+        updateTimer?.Dispose();
+        delayTimer?.Dispose();
+        _trayIcon?.Dispose();
+        base.OnFormClosed(e);
+    }
+
     #endregion
 
-    #region UI Helpers
+    // ────────────────────────────────────────────────────────────────
+    #region Helpers
 
-    private void SetOptionsExpanded(bool expanded)
-    {
-        _optionsExpanded = expanded;
-        lblToggleOptions.Text = expanded ? "▼ Options" : "▶ Options";
-        pnlOptions.Visible = expanded;
-        int newHeight = expanded ? ExpandedHeight : CollapsedHeight;
-        pnlStatus.Top = newHeight - 48;
-        ClientSize = new System.Drawing.Size(ClientSize.Width, newHeight);
-    }
-
-    private void ValidateActionSelection()
-    {
-        var anyActionSelected = chkMouseClick.Checked || chkScrollLock.Checked || chkArrowKeys.Checked;
-        btnStartStop.Enabled = _state == AppState.Running || (anyActionSelected && _state == AppState.Idle);
-    }
-
-    private void SetConfigEnabled(bool enabled)
-    {
-        numDuration.Enabled = enabled;
-        numFrequency.Enabled = enabled;
-        numDelay.Enabled = enabled;
-        cmbTimeoutAction.Enabled = enabled;
-        chkMouseClick.Enabled = enabled;
-        chkScrollLock.Enabled = enabled;
-        chkArrowKeys.Enabled = enabled;
-    }
+    private static string Truncate(string s, int max) =>
+        s.Length > max ? s[..max] : s;
 
     #endregion
 }
