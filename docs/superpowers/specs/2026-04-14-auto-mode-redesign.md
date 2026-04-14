@@ -159,7 +159,30 @@ The 1-second `updateTimer` must **not** run during Auto monitoring state. There 
 
 ### `GetLastInputInfo` cost
 
-`GetLastInputInfo` reads a single DWORD from kernel shared memory. It does not cross a privilege boundary, causes no I/O, and has no scheduling side-effects. At 30-second intervals the overhead is immeasurable (< 1 ms/hour of CPU time total).
+`GetLastInputInfo` reads a single DWORD from kernel shared memory. It does not cross a privilege boundary, causes no I/O, and has no scheduling side-effects. Even at the minimum 30-second interval the overhead is immeasurable (< 1 ms/hour of CPU time total).
+
+### Dynamic poll interval
+
+Rather than a fixed interval, `idleCheckTimer` uses an interval derived from the configured idle threshold:
+
+```
+poll_interval = max(30s, threshold_minutes × 60 / 4)
+```
+
+| Threshold | Poll interval | Worst-case latency |
+|-----------|--------------|-------------------|
+| 1 min     | 30 s         | +30 s             |
+| 2 min     | 30 s         | +30 s             |
+| 4 min     | 60 s         | +60 s             |
+| 10 min    | 150 s        | +150 s            |
+
+The interval is recalculated once when the scheduler is armed (not on every tick). Implementation is a single expression:
+
+```csharp
+idleCheckTimer.Interval = (int)Math.Max(30_000, (double)idleThresholdMinutes * 60_000 / 4);
+```
+
+This guarantees worst-case activation latency ≤ 125% of the threshold, uses fewer timer ticks for large thresholds, and is correct down to the minimum threshold of 1 minute.
 
 ### No background threads
 
