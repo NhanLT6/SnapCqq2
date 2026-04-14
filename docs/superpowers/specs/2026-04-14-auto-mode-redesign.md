@@ -142,6 +142,41 @@ Loaded on startup, saved immediately on any change (ensures no config loss on cr
 
 ---
 
+## Performance & Lightweight Contract
+
+This app must never measurably affect Windows performance. The following rules are binding:
+
+### Timer discipline
+
+| Timer | Interval | Runs when |
+|-------|----------|-----------|
+| `idleCheckTimer` | 30 s | Auto mode armed only (not when disabled, not in Manual mode) |
+| `actionTimer` | N min (user config) | Actively automating only |
+| `updateTimer` | 1 s | Actively automating only — **must be stopped during monitoring** |
+| `delayTimer` | 1 s | Manual delay countdown only |
+
+The 1-second `updateTimer` must **not** run during Auto monitoring state. There is nothing to update in the status bar that changes every second while the user is active. It starts only when automation fires, and stops the moment automation pauses.
+
+### `GetLastInputInfo` cost
+
+`GetLastInputInfo` reads a single DWORD from kernel shared memory. It does not cross a privilege boundary, causes no I/O, and has no scheduling side-effects. At 30-second intervals the overhead is immeasurable (< 1 ms/hour of CPU time total).
+
+### No background threads
+
+All timers use `System.Windows.Forms.Timer`, which runs on the UI thread and fires `WM_TIMER` messages. No `Thread`, `Task`, `BackgroundWorker`, or `ThreadPool` usage is introduced. This eliminates contention, context-switch overhead, and GC pressure from thread stacks.
+
+### Tray-only state
+
+When hidden to tray, the form is not rendered. The only live resources are:
+- The `NotifyIcon` (a Win32 tray handle)
+- One 30-second timer message per poll cycle (Auto armed) or nothing (Disabled / Manual idle)
+
+### Settings I/O
+
+Settings are written to disk only when a value changes (not on a timer). The JSON file is small (< 1 KB). No polling of the settings file occurs.
+
+---
+
 ## Out of Scope
 
 - Multiple schedule profiles
