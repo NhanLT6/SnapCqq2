@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SnapCqq2 — UI Mockup v3</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    font-size: 13px;
+    background: #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 36px 20px 60px;
+    gap: 36px;
+  }
+
+  h1 { font-size: 15px; font-weight: 700; color: #222; }
+  .page-note { font-size: 12px; color: #666; text-align: center; max-width: 660px; line-height: 1.6; }
+  .mockup-title { font-size: 13px; font-weight: 700; color: #333; text-align: center; margin-bottom: 6px; }
+
+  /* ── Window Shell ─────────────────────────────── */
+  .window { background: #f0f0f0; border: 1px solid #888; box-shadow: 3px 3px 10px rgba(0,0,0,.28); width: 580px; }
+  .title-bar {
+    background: linear-gradient(to bottom, #3c6cbc, #2a4fa0);
+    color: white; font-size: 12px; font-weight: bold;
+    padding: 5px 8px; display: flex; align-items: center; justify-content: space-between;
+  }
+  .title-bar .t { display: flex; align-items: center; gap: 6px; }
+  .title-controls { display: flex; gap: 1px; }
+  .tb { background: transparent; border: none; color: white; font-size: 11px; width: 24px; height: 18px; cursor: pointer; }
+  .tb:hover { background: rgba(255,255,255,.2); }
+  .tb.x:hover { background: #c00; }
+
+  /* ── Tabs ─────────────────────────────────────── */
+  .tabs { display: flex; border-bottom: 2px solid #b0b0b0; padding: 0 10px; background: #e0e0e0; }
+  .tab {
+    padding: 6px 20px; font-size: 12px; cursor: pointer;
+    border: 1px solid transparent; border-bottom: none;
+    margin-bottom: -2px; border-radius: 3px 3px 0 0;
+    background: #d0d0d0; color: #555;
+  }
+  .tab.active { background: #f0f0f0; border-color: #b0b0b0; color: #111; font-weight: 700; }
+
+  /* ── Shared primitives ───────────────────────── */
+  .lbl-sm { font-size: 11px; color: #777; white-space: nowrap; }
+  .divider { height: 1px; background: #ccc; margin: 7px 0; }
+  .row { display: flex; align-items: center; gap: 7px; margin-bottom: 7px; flex-wrap: wrap; }
+
+  .time-pick {
+    display: flex; align-items: center;
+    border: 1px solid #aaa; background: white; border-radius: 2px; height: 24px; overflow: hidden;
+  }
+  .time-pick input { border:none;outline:none;font-family:inherit;font-size:12px;width:52px;text-align:center;background:transparent;color:#222; }
+  .time-pick .sp { display:flex;flex-direction:column;border-left:1px solid #d0d0d0;height:100%; }
+  .time-pick .sp span { font-size:7px;padding:2px 3px;color:#666;cursor:pointer;flex:1;display:flex;align-items:center;justify-content:center; }
+  .time-pick .sp span:hover { background:#ddd; }
+
+  .num { display:flex;align-items:center;border:1px solid #aaa;background:white;border-radius:2px;height:24px;overflow:hidden; }
+  .num input { border:none;outline:none;font-size:12px;width:38px;text-align:center;background:transparent;color:#222; }
+  .num .sp { display:flex;flex-direction:column;border-left:1px solid #d0d0d0;height:100%; }
+  .num .sp span { font-size:7px;padding:2px 3px;color:#666;cursor:pointer;flex:1;display:flex;align-items:center;justify-content:center; }
+  .num .sp span:hover { background:#ddd; }
+
+  select.ctrl { font-family:inherit;font-size:12px;height:24px;border:1px solid #aaa;border-radius:2px;background:white;color:#222;padding:0 4px; }
+
+  .chk { display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#333; }
+  .chk input { accent-color:#2e7d32;width:14px;height:14px; }
+
+  .day-btn {
+    width:38px;height:28px;border:1px solid #aaa;background:#e4e4e4;border-radius:3px;
+    font-size:11px;font-weight:700;color:#555;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .day-btn.on  { background:#2e7d32;color:white;border-color:#1b5e20; }
+  .day-btn.dim { background:#f2f2f2;color:#bbb;border-color:#ddd; }
+
+  /* ── Section cards ────────────────────────────── */
+  .section-card {
+    background:#fafafa;border:1px solid #ddd;border-radius:4px;
+    margin-bottom:7px;overflow:hidden;
+  }
+  .card-header {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:7px 12px 6px;cursor:pointer;user-select:none;
+  }
+  .card-header:hover { background:#f2f2f2; }
+  .card-title {
+    font-size:11px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;
+    color:#2e7d32;display:flex;align-items:center;gap:5px;
+  }
+  .card-title.blue { color:#2e7d32; }
+  .card-title.orange { color:#2e7d32; }
+  .card-chevron { font-size:10px;color:#999; }
+  .card-body { padding:2px 12px 9px; }
+  .card-body.collapsed { display:none; }
+
+  /* ── Status bar with button ───────────────────── */
+  .status-bar {
+    background:#f5f5f5;border-top:1px solid #ccc;
+    padding:0;
+  }
+  .status-main {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:7px 10px 5px 12px;gap:8px;
+  }
+  .status-left { display:flex;align-items:center;gap:6px; }
+  .dot { width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0; }
+  .dot.run   { background:#2e7d32; }
+  .dot.watch { background:#f9a825; }
+  .dot.off   { background:#bbb; }
+  .status-text { font-size:12px;font-weight:600;color:#222; }
+  .status-sub  { font-size:11px;color:#777; }
+
+  .btn-enable {
+    border:none;border-radius:4px;
+    font-family:inherit;font-size:12px;font-weight:700;
+    color:white;cursor:pointer;padding:5px 14px;white-space:nowrap;flex-shrink:0;
+  }
+  .btn-enable.armed  { background:#2e7d32; }
+  .btn-enable.disarm { background:#b71c1c; }
+
+  .status-log-row {
+    padding:2px 12px 6px;
+    font-size:11px;color:#666;font-family:Consolas,monospace;
+    border-top:1px solid #ebebeb;
+  }
+
+  /* ── Settings tab ─────────────────────────────── */
+  .setting-row {
+    display:flex;align-items:center;justify-content:space-between;
+    padding:10px 0;border-bottom:1px solid #ebebeb;
+  }
+  .setting-row:last-child { border-bottom:none; }
+  .setting-label { font-size:12px;color:#222; }
+  .setting-desc  { font-size:11px;color:#888;margin-top:2px; }
+
+  /* Toggle switch (CSS only) */
+  .toggle-wrap { display:flex;align-items:center;gap:8px; }
+  .toggle {
+    position:relative;width:40px;height:22px;flex-shrink:0;
+  }
+  .toggle input { opacity:0;width:0;height:0;position:absolute; }
+  .toggle-slider {
+    position:absolute;inset:0;background:#ccc;border-radius:11px;cursor:pointer;transition:.2s;
+  }
+  .toggle-slider::after {
+    content:'';position:absolute;width:16px;height:16px;background:white;
+    border-radius:50%;top:3px;left:3px;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.3);
+  }
+  .toggle input:checked + .toggle-slider { background:#2e7d32; }
+  .toggle input:checked + .toggle-slider::after { left:21px; }
+
+  .annotation {
+    background:#fffde7;border:1px solid #f9a825;border-radius:4px;
+    padding:10px 14px;font-size:12px;color:#444;max-width:580px;line-height:1.7;
+  }
+  .annotation strong { color:#222; }
+  .annotation ul { margin:4px 0 0 18px; }
+  .annotation li { margin-bottom:2px; }
+
+  .tab-name-badge {
+    display:inline-block;background:#1565c0;color:white;font-size:11px;font-weight:700;
+    padding:2px 8px;border-radius:3px;margin:0 3px;
+  }
+</style>
+</head>
+<body>
+
+<h1>SnapCqq2 — UI Mockup v3</h1>
+<p class="page-note">
+  Option C refined: collapsible HOW &amp; AFTER cards · Enable button in status bar ·
+  New <span class="tab-name-badge">General</span> tab for app-wide settings.<br>
+  Three tab name candidates: <strong>General</strong> · <strong>System</strong> · <strong>App Settings</strong>
+</p>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     AUTO TAB
+══════════════════════════════════════════════════════════ -->
+
+<div><p class="mockup-title">Auto tab — HOW and AFTER collapsed by default</p></div>
+
+<div class="window">
+  <div class="title-bar">
+    <div class="t"><span>⚙</span> SnapCqq2</div>
+    <div class="title-controls">
+      <button class="tb">─</button><button class="tb">□</button><button class="tb x">✕</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active">Auto</div>
+    <div class="tab">Manual</div>
+    <div class="tab">General</div>
+  </div>
+
+  <div style="padding:10px 10px 0;">
+
+    <!-- WHEN card — always expanded, no collapse -->
+    <div class="section-card">
+      <div class="card-header" style="cursor:default;">
+        <div class="card-title">📅 When</div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <span style="width:42px;font-size:12px;color:#444;">Days</span>
+          <div style="display:flex;gap:4px;">
+            <div class="day-btn on">Mon</div>
+            <div class="day-btn on">Tue</div>
+            <div class="day-btn on">Wed</div>
+            <div class="day-btn on">Thu</div>
+            <div class="day-btn on">Fri</div>
+            <div class="day-btn dim">Sat</div>
+            <div class="day-btn dim">Sun</div>
+          </div>
+        </div>
+        <div class="row">
+          <span style="width:42px;font-size:12px;color:#444;">Hours</span>
+          <div class="time-pick"><input value="09:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">to</span>
+          <div class="time-pick"><input value="18:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm" style="margin-left:10px;">Break</span>
+          <div class="time-pick"><input value="12:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">–</span>
+          <div class="time-pick"><input value="13:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+        </div>
+        <div class="row" style="margin-bottom:0;">
+          <span style="width:42px;font-size:12px;color:#444;">Idle</span>
+          <span class="lbl-sm">Activate after</span>
+          <div class="num"><input value="4" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min idle</span>
+          <label class="chk" style="margin-left:10px;"><input type="checkbox" checked>Stop when user returns</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW card — collapsible, collapsed by default -->
+    <div class="section-card">
+      <div class="card-header">
+        <div class="card-title blue">⚡ How</div>
+        <span class="card-chevron">▶</span>
+      </div>
+      <div class="card-body collapsed">
+        <div class="row">
+          <span style="width:60px;font-size:12px;color:#444;">Actions</span>
+          <label class="chk"><input type="checkbox" checked>Scroll-lock</label>
+          <label class="chk"><input type="checkbox">Mouse click</label>
+          <label class="chk"><input type="checkbox">Arrow keys</label>
+        </div>
+        <div class="row" style="margin-bottom:0;">
+          <span style="width:60px;font-size:12px;color:#444;">Frequency</span>
+          <span class="lbl-sm">Every</span>
+          <div class="num"><input value="1" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER card — collapsible, collapsed by default -->
+    <div class="section-card" style="margin-bottom:0;">
+      <div class="card-header">
+        <div class="card-title orange">🔚 After schedule ends</div>
+        <span class="card-chevron">▶</span>
+      </div>
+      <div class="card-body collapsed">
+        <div class="row" style="margin-bottom:0;">
+          <select class="ctrl">
+            <option>Do nothing</option>
+            <option>Lock Windows</option>
+            <option>Shutdown Windows</option>
+            <option>Close app</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /body padding -->
+
+  <!-- Status bar with Enable button -->
+  <div class="status-bar" style="margin-top:8px;">
+    <div class="status-main">
+      <div class="status-left">
+        <span class="dot watch"></span>
+        <div>
+          <div class="status-text">Monitoring — waiting for idle</div>
+          <div class="status-sub">Within schedule · Mon–Fri 09:00–18:00</div>
+        </div>
+      </div>
+      <button class="btn-enable armed">Enable</button>
+    </div>
+    <div class="status-log-row">[09:15:00 AM] Schedule started</div>
+  </div>
+</div>
+
+
+<!-- HOW expanded state for reference -->
+<div><p class="mockup-title">Auto tab — HOW card expanded</p></div>
+
+<div class="window">
+  <div class="title-bar">
+    <div class="t"><span>⚙</span> SnapCqq2</div>
+    <div class="title-controls">
+      <button class="tb">─</button><button class="tb">□</button><button class="tb x">✕</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab active">Auto</div>
+    <div class="tab">Manual</div>
+    <div class="tab">General</div>
+  </div>
+  <div style="padding:10px 10px 0;">
+
+    <div class="section-card">
+      <div class="card-header" style="cursor:default;">
+        <div class="card-title">📅 When</div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <span style="width:42px;font-size:12px;color:#444;">Days</span>
+          <div style="display:flex;gap:4px;">
+            <div class="day-btn on">Mon</div><div class="day-btn on">Tue</div>
+            <div class="day-btn on">Wed</div><div class="day-btn on">Thu</div>
+            <div class="day-btn on">Fri</div><div class="day-btn dim">Sat</div>
+            <div class="day-btn dim">Sun</div>
+          </div>
+        </div>
+        <div class="row">
+          <span style="width:42px;font-size:12px;color:#444;">Hours</span>
+          <div class="time-pick"><input value="09:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">to</span>
+          <div class="time-pick"><input value="18:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm" style="margin-left:10px;">Break</span>
+          <div class="time-pick"><input value="12:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">–</span>
+          <div class="time-pick"><input value="13:00" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+        </div>
+        <div class="row" style="margin-bottom:0;">
+          <span style="width:42px;font-size:12px;color:#444;">Idle</span>
+          <span class="lbl-sm">Activate after</span>
+          <div class="num"><input value="4" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min idle</span>
+          <label class="chk" style="margin-left:10px;"><input type="checkbox" checked>Stop when user returns</label>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW — expanded -->
+    <div class="section-card">
+      <div class="card-header">
+        <div class="card-title blue">⚡ How</div>
+        <span class="card-chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <span style="width:60px;font-size:12px;color:#444;">Actions</span>
+          <label class="chk"><input type="checkbox" checked>Scroll-lock</label>
+          <label class="chk"><input type="checkbox">Mouse click</label>
+          <label class="chk"><input type="checkbox">Arrow keys</label>
+        </div>
+        <div class="row" style="margin-bottom:0;">
+          <span style="width:60px;font-size:12px;color:#444;">Frequency</span>
+          <span class="lbl-sm">Every</span>
+          <div class="num"><input value="1" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-card" style="margin-bottom:0;">
+      <div class="card-header">
+        <div class="card-title orange">🔚 After schedule ends</div>
+        <span class="card-chevron">▶</span>
+      </div>
+      <div class="card-body collapsed"></div>
+    </div>
+  </div>
+
+  <div class="status-bar" style="margin-top:8px;">
+    <div class="status-main">
+      <div class="status-left">
+        <span class="dot run"></span>
+        <div>
+          <div class="status-text">Active — automating (idle 00:05:33)</div>
+          <div class="status-sub">Within schedule · Mon–Fri 09:00–18:00</div>
+        </div>
+      </div>
+      <button class="btn-enable disarm">Disable</button>
+    </div>
+    <div class="status-log-row">[11:37:50 AM] Scroll-lock toggle</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     MANUAL TAB  (card style to match)
+══════════════════════════════════════════════════════════ -->
+
+<div><p class="mockup-title">Manual tab — card style, matching Auto</p></div>
+
+<div class="window">
+  <div class="title-bar">
+    <div class="t"><span>⚙</span> SnapCqq2</div>
+    <div class="title-controls">
+      <button class="tb">─</button><button class="tb">□</button><button class="tb x">✕</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab">Auto</div>
+    <div class="tab active">Manual</div>
+    <div class="tab">General</div>
+  </div>
+  <div style="padding:10px 10px 0;">
+
+    <!-- RUN card — always visible, core manual config -->
+    <div class="section-card">
+      <div class="card-header" style="cursor:default;">
+        <div class="card-title">▶ Run</div>
+      </div>
+      <div class="card-body">
+        <div class="row">
+          <span style="width:60px;font-size:12px;color:#444;">Duration</span>
+          <div class="num"><input value="30" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min</span>
+          <span class="lbl-sm" style="margin-left:10px;">then</span>
+          <select class="ctrl">
+            <option>Close when finished</option>
+            <option>Lock Windows</option>
+            <option>Shutdown Windows</option>
+            <option>Do nothing</option>
+          </select>
+        </div>
+        <div class="row" style="margin-bottom:0;">
+          <span style="width:60px;font-size:12px;color:#444;">Delay</span>
+          <div class="num"><input value="0" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min &nbsp;(0 = start immediately)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- HOW card — collapsible -->
+    <div class="section-card" style="margin-bottom:0;">
+      <div class="card-header">
+        <div class="card-title blue">⚡ How</div>
+        <span class="card-chevron">▶</span>
+      </div>
+      <div class="card-body collapsed">
+        <div class="row">
+          <span style="width:60px;font-size:12px;color:#444;">Actions</span>
+          <label class="chk"><input type="checkbox" checked>Scroll-lock</label>
+          <label class="chk"><input type="checkbox">Mouse click</label>
+          <label class="chk"><input type="checkbox">Arrow keys</label>
+        </div>
+        <div class="row" style="margin-bottom:0;">
+          <span style="width:60px;font-size:12px;color:#444;">Frequency</span>
+          <span class="lbl-sm">Every</span>
+          <div class="num"><input value="1" readonly><div class="sp"><span>▲</span><span>▼</span></div></div>
+          <span class="lbl-sm">min</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="status-bar" style="margin-top:8px;">
+    <div class="status-main">
+      <div class="status-left">
+        <span class="dot off"></span>
+        <div>
+          <div class="status-text">Idle</div>
+          <div class="status-sub">Ready to start</div>
+        </div>
+      </div>
+      <button class="btn-enable armed">Start</button>
+    </div>
+    <div class="status-log-row">—</div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════
+     GENERAL TAB  (app-wide settings)
+══════════════════════════════════════════════════════════ -->
+
+<div><p class="mockup-title">General tab — app-wide settings</p></div>
+
+<div class="window">
+  <div class="title-bar">
+    <div class="t"><span>⚙</span> SnapCqq2</div>
+    <div class="title-controls">
+      <button class="tb">─</button><button class="tb">□</button><button class="tb x">✕</button>
+    </div>
+  </div>
+  <div class="tabs">
+    <div class="tab">Auto</div>
+    <div class="tab">Manual</div>
+    <div class="tab active">General</div>
+  </div>
+  <div style="padding:10px 14px 12px;">
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Launch on Windows startup</div>
+        <div class="setting-desc">Start SnapCqq2 automatically when you log in</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Start minimized to tray</div>
+        <div class="setting-desc">Hide the window on launch, show only the tray icon</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div>
+        <div class="setting-label">Default mode on launch</div>
+        <div class="setting-desc">Which tab to show first when the app opens</div>
+      </div>
+      <select class="ctrl">
+        <option>Auto</option>
+        <option>Manual</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- empty status bar for consistency -->
+  <div class="status-bar">
+    <div class="status-main" style="padding:6px 12px;">
+      <span class="lbl-sm">SnapCqq2 v2.0</span>
+    </div>
+    <div class="status-log-row" style="visibility:hidden;">—</div>
+  </div>
+</div>
+
+<div class="annotation">
+  <strong>Tab name recommendation: "General"</strong> — it's the most familiar term for app-wide settings (used by VS Code, Chrome, Windows itself). Alternatives:
+  <ul>
+    <li><strong>System</strong> — emphasises Windows-level integration (startup, tray), but feels more technical</li>
+    <li><strong>App Settings</strong> — very explicit, but a bit long for a tab label</li>
+  </ul>
+  <br>
+  <strong>Key decisions in this mockup:</strong>
+  <ul>
+    <li>WHEN card is always expanded (it's the primary config you touch daily)</li>
+    <li>HOW and AFTER cards start collapsed — click header to expand</li>
+    <li>Enable / Disable button lives in the status bar (right side), replacing the big button</li>
+    <li>Manual tab uses the same card structure: RUN card (always open) + HOW card (collapsible)</li>
+    <li>General tab adds "Start minimized" and "Default mode" as bonus settings that belong there</li>
+  </ul>
+</div>
+
+<div style="height:40px;"></div>
+</body>
+</html>
