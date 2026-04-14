@@ -3,3 +3,12 @@ obj/
 /packages/
 riderModule.iml
 /_ReSharper.Caches/
+
+# IDE & tool directories
+.vs/
+.idea/
+.claude/
+
+# User-specific settings
+*.user
+*.DotSettings.user
