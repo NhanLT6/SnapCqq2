@@ -36,7 +36,7 @@ public class AppSettings
     public TimeoutAction ManualTimeoutAction   { get; set; } = TimeoutAction.CloseApp;
 
     // General
-    public bool   LaunchOnStartup { get; set; } = false;
-    public bool   StartMinimized  { get; set; } = false;
+    public bool   LaunchOnStartup { get; set; } = true;
+    public bool   StartMinimized  { get; set; } = true;
     public string DefaultMode     { get; set; } = "Auto"; // "Auto" or "Manual"
 }

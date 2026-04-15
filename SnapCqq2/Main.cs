@@ -54,14 +54,11 @@ public partial class Main : Form
         InitializeComponent();
         BuildUI();
         SetupTrayIcon();
-        _settings = SettingsManager.Load();
+        _settings = LoadSettings();
         LoadSettingsToUI();
         RelayoutAutoCards();
         WireEvents();
         UpdateStatusBar();
-
-        if (_settings.StartMinimized)
-            Load += (_, _) => HideToTray();
     }
 
     private void WireEvents()
@@ -117,6 +114,20 @@ public partial class Main : Form
         actionTimer.Tick    += ActionTimer_Tick;
         updateTimer.Tick    += UpdateTimer_Tick;
         delayTimer.Tick     += DelayTimer_Tick;
+    }
+
+    private static AppSettings LoadSettings()
+    {
+        bool isFirstRun = !File.Exists(SettingsManager.FilePath);
+        var settings = SettingsManager.Load();
+
+        if (isFirstRun)
+        {
+            StartupManager.Enable();
+            SettingsManager.Save(settings); // persist defaults so next launch isn't treated as first run
+        }
+
+        return settings;
     }
 
     #endregion
@@ -676,6 +687,19 @@ public partial class Main : Form
         WindowState = FormWindowState.Normal;
         BringToFront();
         _trayIcon.Visible = false;
+    }
+
+    protected override void SetVisibleCore(bool value)
+    {
+        if (!IsHandleCreated && _settings.StartMinimized)
+        {
+            CreateHandle();
+            _trayIcon.Visible = true;
+            base.SetVisibleCore(false);
+            return;
+        }
+
+        base.SetVisibleCore(value);
     }
 
     protected override void OnResize(EventArgs e)
