@@ -22,10 +22,11 @@ public class AppSettings
     public bool StopWhenUserReturns  { get; set; } = true;
 
     // Shared: actions + frequency (apply to both Auto and Manual modes)
-    public bool UseScrollLock    { get; set; } = true;
-    public bool UseMouseClick    { get; set; } = false;
-    public bool UseArrowKeys     { get; set; } = false;
-    public int  FrequencyMinutes { get; set; } = 1;
+    public bool UseScrollLock      { get; set; } = true;
+    public bool UseMouseClick      { get; set; } = false;
+    public bool UseArrowKeys       { get; set; } = false;
+    public bool UseTeamsKeepAlive  { get; set; } = false;
+    public int  FrequencyMinutes   { get; set; } = 1;
 
     // Auto: what happens when the schedule window ends
     public TimeoutAction AutoTimeoutAction { get; set; } = TimeoutAction.DoNothing;

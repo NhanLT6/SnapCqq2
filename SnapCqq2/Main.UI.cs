@@ -53,9 +53,10 @@ partial class Main
     private System.Windows.Forms.Label        lblHowTitle    = null!;
     private System.Windows.Forms.Panel        pnlHowBody     = null!;
     private System.Windows.Forms.Label        lblActionsLabel = null!;
-    private System.Windows.Forms.CheckBox     chkScrollLock  = null!;
-    private System.Windows.Forms.CheckBox     chkMouseClick  = null!;
-    private System.Windows.Forms.CheckBox     chkArrowKeys   = null!;
+    private System.Windows.Forms.CheckBox     chkScrollLock       = null!;
+    private System.Windows.Forms.CheckBox     chkMouseClick       = null!;
+    private System.Windows.Forms.CheckBox     chkArrowKeys        = null!;
+    private System.Windows.Forms.CheckBox     chkTeamsKeepAlive   = null!;
     private System.Windows.Forms.Label        lblEveryAuto   = null!;
     private System.Windows.Forms.NumericUpDown numFrequency  = null!;
     private System.Windows.Forms.Label        lblFreqMinAuto = null!;
@@ -86,9 +87,10 @@ partial class Main
     private System.Windows.Forms.Label        lblManualHowTitle  = null!;
     private System.Windows.Forms.Panel        pnlManualHowBody   = null!;
     private System.Windows.Forms.Label        lblManualActionsLabel = null!;
-    private System.Windows.Forms.CheckBox     chkManualScrollLock   = null!;
-    private System.Windows.Forms.CheckBox     chkManualMouseClick   = null!;
-    private System.Windows.Forms.CheckBox     chkManualArrowKeys    = null!;
+    private System.Windows.Forms.CheckBox     chkManualScrollLock        = null!;
+    private System.Windows.Forms.CheckBox     chkManualMouseClick        = null!;
+    private System.Windows.Forms.CheckBox     chkManualArrowKeys         = null!;
+    private System.Windows.Forms.CheckBox     chkManualTeamsKeepAlive    = null!;
     private System.Windows.Forms.Label        lblEveryManual        = null!;
     private System.Windows.Forms.NumericUpDown numManualFrequency   = null!;
     private System.Windows.Forms.Label        lblFreqMinManual      = null!;
@@ -175,10 +177,11 @@ partial class Main
         lblHowTitle  = new System.Windows.Forms.Label();
         pnlHowBody   = new System.Windows.Forms.Panel();
 
-        lblActionsLabel = new System.Windows.Forms.Label { Text = "Actions", Location = new System.Drawing.Point(8, 8),  Size = new System.Drawing.Size(55, 21), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
-        chkScrollLock   = new System.Windows.Forms.CheckBox { Text = "Scroll-lock", Location = new System.Drawing.Point(66, 9),  AutoSize = true, Checked = true };
-        chkMouseClick   = new System.Windows.Forms.CheckBox { Text = "Mouse click", Location = new System.Drawing.Point(172, 9), AutoSize = true };
-        chkArrowKeys    = new System.Windows.Forms.CheckBox { Text = "Arrow keys",  Location = new System.Drawing.Point(282, 9), AutoSize = true };
+        lblActionsLabel   = new System.Windows.Forms.Label { Text = "Actions", Location = new System.Drawing.Point(8, 8),  Size = new System.Drawing.Size(55, 21), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        chkScrollLock     = new System.Windows.Forms.CheckBox { Text = "Scroll-lock",      Location = new System.Drawing.Point(66,  9), AutoSize = true, Checked = true };
+        chkMouseClick     = new System.Windows.Forms.CheckBox { Text = "Mouse click",      Location = new System.Drawing.Point(172, 9), AutoSize = true };
+        chkArrowKeys      = new System.Windows.Forms.CheckBox { Text = "Arrow keys",       Location = new System.Drawing.Point(282, 9), AutoSize = true };
+        chkTeamsKeepAlive = new System.Windows.Forms.CheckBox { Text = "Teams keepalive",  Location = new System.Drawing.Point(392, 9), AutoSize = true };
         lblEveryAuto    = new System.Windows.Forms.Label { Text = "Every", Location = new System.Drawing.Point(8, 38), Size = new System.Drawing.Size(55, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
         numFrequency    = new System.Windows.Forms.NumericUpDown { Location = new System.Drawing.Point(66, 38), Width = 50, Minimum = 1, Maximum = 60, Value = 1 };
         lblFreqMinAuto  = new System.Windows.Forms.Label { Text = "min", Location = new System.Drawing.Point(120, 38), Size = new System.Drawing.Size(35, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
@@ -226,10 +229,11 @@ partial class Main
         lblManualHowTitle  = new System.Windows.Forms.Label();
         pnlManualHowBody   = new System.Windows.Forms.Panel();
 
-        lblManualActionsLabel = new System.Windows.Forms.Label { Text = "Actions", Location = new System.Drawing.Point(8, 8), Size = new System.Drawing.Size(55, 21), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
-        chkManualScrollLock   = new System.Windows.Forms.CheckBox { Text = "Scroll-lock", Location = new System.Drawing.Point(66, 9),  AutoSize = true, Checked = true };
-        chkManualMouseClick   = new System.Windows.Forms.CheckBox { Text = "Mouse click", Location = new System.Drawing.Point(172, 9), AutoSize = true };
-        chkManualArrowKeys    = new System.Windows.Forms.CheckBox { Text = "Arrow keys",  Location = new System.Drawing.Point(282, 9), AutoSize = true };
+        lblManualActionsLabel      = new System.Windows.Forms.Label { Text = "Actions", Location = new System.Drawing.Point(8, 8), Size = new System.Drawing.Size(55, 21), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        chkManualScrollLock        = new System.Windows.Forms.CheckBox { Text = "Scroll-lock",     Location = new System.Drawing.Point(66,  9), AutoSize = true, Checked = true };
+        chkManualMouseClick        = new System.Windows.Forms.CheckBox { Text = "Mouse click",     Location = new System.Drawing.Point(172, 9), AutoSize = true };
+        chkManualArrowKeys         = new System.Windows.Forms.CheckBox { Text = "Arrow keys",      Location = new System.Drawing.Point(282, 9), AutoSize = true };
+        chkManualTeamsKeepAlive    = new System.Windows.Forms.CheckBox { Text = "Teams keepalive", Location = new System.Drawing.Point(392, 9), AutoSize = true };
         lblEveryManual        = new System.Windows.Forms.Label { Text = "Every", Location = new System.Drawing.Point(8, 38), Size = new System.Drawing.Size(55, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
         numManualFrequency    = new System.Windows.Forms.NumericUpDown { Location = new System.Drawing.Point(66, 38), Width = 50, Minimum = 1, Maximum = 60, Value = 1 };
         lblFreqMinManual      = new System.Windows.Forms.Label { Text = "min", Location = new System.Drawing.Point(120, 38), Size = new System.Drawing.Size(35, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
@@ -297,7 +301,7 @@ partial class Main
         pnlHowHeader.Controls.Add(lblHowTitle);
 
         pnlHowBody.Controls.AddRange(new System.Windows.Forms.Control[] {
-            lblActionsLabel, chkScrollLock, chkMouseClick, chkArrowKeys,
+            lblActionsLabel, chkScrollLock, chkMouseClick, chkArrowKeys, chkTeamsKeepAlive,
             lblEveryAuto, numFrequency, lblFreqMinAuto });
         pnlHowBody.Dock      = System.Windows.Forms.DockStyle.Fill;
         pnlHowBody.BackColor = cardBg;
@@ -374,7 +378,8 @@ partial class Main
 
         pnlManualHowBody.Controls.AddRange(new System.Windows.Forms.Control[] {
             lblManualActionsLabel, chkManualScrollLock, chkManualMouseClick,
-            chkManualArrowKeys, lblEveryManual, numManualFrequency, lblFreqMinManual });
+            chkManualArrowKeys, chkManualTeamsKeepAlive,
+            lblEveryManual, numManualFrequency, lblFreqMinManual });
         pnlManualHowBody.Dock      = System.Windows.Forms.DockStyle.Fill;
         pnlManualHowBody.BackColor = cardBg;
         pnlManualHowBody.Visible   = false;

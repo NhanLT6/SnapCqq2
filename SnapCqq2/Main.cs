@@ -89,6 +89,7 @@ public partial class Main : Form
         chkScrollLock.CheckedChanged       += AutoSetting_Changed;
         chkMouseClick.CheckedChanged       += AutoSetting_Changed;
         chkArrowKeys.CheckedChanged        += AutoSetting_Changed;
+        chkTeamsKeepAlive.CheckedChanged   += AutoSetting_Changed;
         numFrequency.ValueChanged          += AutoSetting_Changed;
         cmbAutoTimeout.SelectedIndexChanged += AutoSetting_Changed;
 
@@ -96,9 +97,10 @@ public partial class Main : Form
         numDuration.ValueChanged              += ManualSetting_Changed;
         numDelay.ValueChanged                 += ManualSetting_Changed;
         cmbManualTimeout.SelectedIndexChanged += ManualSetting_Changed;
-        chkManualScrollLock.CheckedChanged    += ManualSetting_Changed;
-        chkManualMouseClick.CheckedChanged    += ManualSetting_Changed;
-        chkManualArrowKeys.CheckedChanged     += ManualSetting_Changed;
+        chkManualScrollLock.CheckedChanged         += ManualSetting_Changed;
+        chkManualMouseClick.CheckedChanged         += ManualSetting_Changed;
+        chkManualArrowKeys.CheckedChanged          += ManualSetting_Changed;
+        chkManualTeamsKeepAlive.CheckedChanged     += ManualSetting_Changed;
         numManualFrequency.ValueChanged       += ManualSetting_Changed;
 
         // General settings
@@ -152,9 +154,10 @@ public partial class Main : Form
             chkStopOnReturn.Checked = _settings.StopWhenUserReturns;
 
             // Actions — shared; populate both Auto and Manual HOW cards
-            chkScrollLock.Checked = chkManualScrollLock.Checked = _settings.UseScrollLock;
-            chkMouseClick.Checked = chkManualMouseClick.Checked = _settings.UseMouseClick;
-            chkArrowKeys.Checked  = chkManualArrowKeys.Checked  = _settings.UseArrowKeys;
+            chkScrollLock.Checked         = chkManualScrollLock.Checked         = _settings.UseScrollLock;
+            chkMouseClick.Checked         = chkManualMouseClick.Checked         = _settings.UseMouseClick;
+            chkArrowKeys.Checked          = chkManualArrowKeys.Checked          = _settings.UseArrowKeys;
+            chkTeamsKeepAlive.Checked     = chkManualTeamsKeepAlive.Checked     = _settings.UseTeamsKeepAlive;
             numFrequency.Value = numManualFrequency.Value = _settings.FrequencyMinutes;
 
             cmbAutoTimeout.SelectedIndex = _settings.AutoTimeoutAction switch
@@ -200,6 +203,7 @@ public partial class Main : Form
         _settings.UseScrollLock        = chkScrollLock.Checked;
         _settings.UseMouseClick        = chkMouseClick.Checked;
         _settings.UseArrowKeys         = chkArrowKeys.Checked;
+        _settings.UseTeamsKeepAlive    = chkTeamsKeepAlive.Checked;
         _settings.FrequencyMinutes     = (int)numFrequency.Value;
         _settings.AutoTimeoutAction = cmbAutoTimeout.SelectedIndex switch
         {
@@ -225,14 +229,16 @@ public partial class Main : Form
         _settings.UseScrollLock         = chkManualScrollLock.Checked;
         _settings.UseMouseClick         = chkManualMouseClick.Checked;
         _settings.UseArrowKeys          = chkManualArrowKeys.Checked;
+        _settings.UseTeamsKeepAlive     = chkManualTeamsKeepAlive.Checked;
         _settings.FrequencyMinutes      = (int)numManualFrequency.Value;
 
         // Sync shared action settings back to Auto HOW controls
         _loading = true;
-        chkScrollLock.Checked = _settings.UseScrollLock;
-        chkMouseClick.Checked = _settings.UseMouseClick;
-        chkArrowKeys.Checked  = _settings.UseArrowKeys;
-        numFrequency.Value    = _settings.FrequencyMinutes;
+        chkScrollLock.Checked         = _settings.UseScrollLock;
+        chkMouseClick.Checked         = _settings.UseMouseClick;
+        chkArrowKeys.Checked          = _settings.UseArrowKeys;
+        chkTeamsKeepAlive.Checked     = _settings.UseTeamsKeepAlive;
+        numFrequency.Value            = _settings.FrequencyMinutes;
         _loading = false;
 
         SettingsManager.Save(_settings);
@@ -553,12 +559,15 @@ public partial class Main : Form
 
     private void PerformRandomAction()
     {
+        // Teams keepalive always fires every tick when enabled — it must beat Teams'
+        // own idle timer reliably, so it cannot be left to random selection.
+        if (_settings.UseTeamsKeepAlive) PerformTeamsKeepAlive();
+
         var actions = new List<Action>();
         if (_settings.UseScrollLock) actions.Add(PerformScrollLock);
         if (_settings.UseMouseClick) actions.Add(PerformMouseClick);
         if (_settings.UseArrowKeys)  actions.Add(PerformArrowKey);
-        if (actions.Count == 0) return;
-        actions[_rng.Next(actions.Count)]();
+        if (actions.Count > 0) actions[_rng.Next(actions.Count)]();
     }
 
     private void PerformScrollLock()
@@ -580,6 +589,12 @@ public partial class Main : Form
         var key = arrows[_rng.Next(arrows.Length)];
         _simulator.Keyboard.KeyPress(key);
         LogAction($"Arrow key: {key}");
+    }
+
+    private void PerformTeamsKeepAlive()
+    {
+        bool sent = TeamsKeepAlive.TrySendKeepAlive();
+        LogAction(sent ? "Teams keepalive sent" : "Teams keepalive — Teams not found");
     }
 
     private void LogAction(string msg) =>
