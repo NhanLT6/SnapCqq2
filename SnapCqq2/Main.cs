@@ -14,10 +14,10 @@ public partial class Main : Form
     // ── Card height constants ──────────────────────────────────────
     private const int CardHeaderH    = 28;
     private const int WhenBodyH      = 104;
-    private const int HowBodyH       = 68;
+    private const int HowBodyH       = 83;
     private const int AfterBodyH     = 39;
     private const int RunBodyH       = 70;
-    private const int ManualHowBodyH = 68;
+    private const int ManualHowBodyH = 83;
     private const int CardGap        = 6;
     private const int TabPadding     = 8;
 
@@ -36,6 +36,7 @@ public partial class Main : Form
     private DateTime _manualDelayEnd;
 
     private bool _loading = false; // suppresses save-on-change handlers during UI population
+    private readonly bool _startMinimized;
 
     // ── Services ───────────────────────────────────────────────────
     private AppSettings _settings = new();
@@ -49,8 +50,9 @@ public partial class Main : Form
     // ────────────────────────────────────────────────────────────────
     #region Init
 
-    public Main()
+    public Main(bool startMinimized = false)
     {
+        _startMinimized = startMinimized;
         InitializeComponent();
         BuildUI();
         SetupTrayIcon();
@@ -90,6 +92,7 @@ public partial class Main : Form
         chkMouseClick.CheckedChanged       += AutoSetting_Changed;
         chkArrowKeys.CheckedChanged        += AutoSetting_Changed;
         chkTeamsKeepAlive.CheckedChanged   += AutoSetting_Changed;
+        chkMouseMove.CheckedChanged        += AutoSetting_Changed;
         numFrequency.ValueChanged          += AutoSetting_Changed;
         cmbAutoTimeout.SelectedIndexChanged += AutoSetting_Changed;
 
@@ -101,11 +104,11 @@ public partial class Main : Form
         chkManualMouseClick.CheckedChanged         += ManualSetting_Changed;
         chkManualArrowKeys.CheckedChanged          += ManualSetting_Changed;
         chkManualTeamsKeepAlive.CheckedChanged     += ManualSetting_Changed;
+        chkManualMouseMove.CheckedChanged          += ManualSetting_Changed;
         numManualFrequency.ValueChanged       += ManualSetting_Changed;
 
         // General settings
         chkLaunchOnStartup.CheckedChanged   += GeneralSetting_Changed;
-        chkStartMinimized.CheckedChanged    += GeneralSetting_Changed;
         cmbDefaultMode.SelectedIndexChanged += GeneralSetting_Changed;
 
         // Tray
@@ -158,6 +161,7 @@ public partial class Main : Form
             chkMouseClick.Checked         = chkManualMouseClick.Checked         = _settings.UseMouseClick;
             chkArrowKeys.Checked          = chkManualArrowKeys.Checked          = _settings.UseArrowKeys;
             chkTeamsKeepAlive.Checked     = chkManualTeamsKeepAlive.Checked     = _settings.UseTeamsKeepAlive;
+            chkMouseMove.Checked          = chkManualMouseMove.Checked          = _settings.UseMouseMove;
             numFrequency.Value = numManualFrequency.Value = _settings.FrequencyMinutes;
 
             cmbAutoTimeout.SelectedIndex = _settings.AutoTimeoutAction switch
@@ -176,8 +180,7 @@ public partial class Main : Form
                 _                             => 0  // CloseApp = "Close when finished"
             };
 
-            chkLaunchOnStartup.Checked  = StartupManager.IsEnabled();
-            chkStartMinimized.Checked   = _settings.StartMinimized;
+            chkLaunchOnStartup.Checked   = StartupManager.IsEnabled();
             cmbDefaultMode.SelectedIndex = _settings.DefaultMode == "Manual" ? 1 : 0;
 
             tabControl.SelectedTab = _settings.DefaultMode == "Manual" ? tabManual : tabAuto;
@@ -204,6 +207,7 @@ public partial class Main : Form
         _settings.UseMouseClick        = chkMouseClick.Checked;
         _settings.UseArrowKeys         = chkArrowKeys.Checked;
         _settings.UseTeamsKeepAlive    = chkTeamsKeepAlive.Checked;
+        _settings.UseMouseMove         = chkMouseMove.Checked;
         _settings.FrequencyMinutes     = (int)numFrequency.Value;
         _settings.AutoTimeoutAction = cmbAutoTimeout.SelectedIndex switch
         {
@@ -230,6 +234,7 @@ public partial class Main : Form
         _settings.UseMouseClick         = chkManualMouseClick.Checked;
         _settings.UseArrowKeys          = chkManualArrowKeys.Checked;
         _settings.UseTeamsKeepAlive     = chkManualTeamsKeepAlive.Checked;
+        _settings.UseMouseMove          = chkManualMouseMove.Checked;
         _settings.FrequencyMinutes      = (int)numManualFrequency.Value;
 
         // Sync shared action settings back to Auto HOW controls
@@ -238,6 +243,7 @@ public partial class Main : Form
         chkMouseClick.Checked         = _settings.UseMouseClick;
         chkArrowKeys.Checked          = _settings.UseArrowKeys;
         chkTeamsKeepAlive.Checked     = _settings.UseTeamsKeepAlive;
+        chkMouseMove.Checked          = _settings.UseMouseMove;
         numFrequency.Value            = _settings.FrequencyMinutes;
         _loading = false;
 
@@ -262,8 +268,7 @@ public partial class Main : Form
     {
         if (_loading) return;
         StartupManager.Sync(chkLaunchOnStartup.Checked);
-        _settings.StartMinimized = chkStartMinimized.Checked;
-        _settings.DefaultMode    = cmbDefaultMode.SelectedIndex == 1 ? "Manual" : "Auto";
+        _settings.DefaultMode = cmbDefaultMode.SelectedIndex == 1 ? "Manual" : "Auto";
         SettingsManager.Save(_settings);
     }
 
@@ -567,6 +572,7 @@ public partial class Main : Form
         if (_settings.UseScrollLock) actions.Add(PerformScrollLock);
         if (_settings.UseMouseClick) actions.Add(PerformMouseClick);
         if (_settings.UseArrowKeys)  actions.Add(PerformArrowKey);
+        if (_settings.UseMouseMove)  actions.Add(PerformMouseMove);
         if (actions.Count > 0) actions[_rng.Next(actions.Count)]();
     }
 
@@ -589,6 +595,14 @@ public partial class Main : Form
         var key = arrows[_rng.Next(arrows.Length)];
         _simulator.Keyboard.KeyPress(key);
         LogAction($"Arrow key: {key}");
+    }
+
+    private void PerformMouseMove()
+    {
+        // 2px jitter and return — net zero displacement, no on-screen indicator
+        _simulator.Mouse.MoveMouseBy(2, 0);
+        _simulator.Mouse.MoveMouseBy(-2, 0);
+        LogAction("Mouse move");
     }
 
     private void PerformTeamsKeepAlive()
@@ -706,11 +720,15 @@ public partial class Main : Form
 
     protected override void SetVisibleCore(bool value)
     {
-        if (!IsHandleCreated && _settings.StartMinimized)
+        // Launched via Windows startup (--minimized flag): suppress window on first show.
+        // Auto mode: arm immediately so the app is working from boot.
+        // Manual mode: show the window so the user can configure and start a run.
+        if (!IsHandleCreated && _startMinimized && _settings.DefaultMode == "Auto")
         {
             CreateHandle();
             _trayIcon.Visible = true;
             base.SetVisibleCore(false);
+            ArmAuto();
             return;
         }
 

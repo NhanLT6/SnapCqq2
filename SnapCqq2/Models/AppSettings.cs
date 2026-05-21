@@ -26,6 +26,7 @@ public class AppSettings
     public bool UseMouseClick      { get; set; } = false;
     public bool UseArrowKeys       { get; set; } = false;
     public bool UseTeamsKeepAlive  { get; set; } = false;
+    public bool UseMouseMove       { get; set; } = false;
     public int  FrequencyMinutes   { get; set; } = 1;
 
     // Auto: what happens when the schedule window ends
@@ -38,6 +39,5 @@ public class AppSettings
 
     // General
     public bool   LaunchOnStartup { get; set; } = true;
-    public bool   StartMinimized  { get; set; } = true;
     public string DefaultMode     { get; set; } = "Auto"; // "Auto" or "Manual"
 }

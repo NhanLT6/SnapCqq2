@@ -16,7 +16,7 @@ public static class StartupManager
     public static void Enable()
     {
         using var key = Registry.CurrentUser.OpenSubKey(RunKey, writable: true);
-        key?.SetValue(AppName, $"\"{Environment.ProcessPath}\"");
+        key?.SetValue(AppName, $"\"{Environment.ProcessPath}\" --minimized");
     }
 
     public static void Disable()

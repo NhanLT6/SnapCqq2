@@ -57,6 +57,7 @@ partial class Main
     private System.Windows.Forms.CheckBox     chkMouseClick       = null!;
     private System.Windows.Forms.CheckBox     chkArrowKeys        = null!;
     private System.Windows.Forms.CheckBox     chkTeamsKeepAlive   = null!;
+    private System.Windows.Forms.CheckBox     chkMouseMove        = null!;
     private System.Windows.Forms.Label        lblEveryAuto   = null!;
     private System.Windows.Forms.NumericUpDown numFrequency  = null!;
     private System.Windows.Forms.Label        lblFreqMinAuto = null!;
@@ -91,6 +92,7 @@ partial class Main
     private System.Windows.Forms.CheckBox     chkManualMouseClick        = null!;
     private System.Windows.Forms.CheckBox     chkManualArrowKeys         = null!;
     private System.Windows.Forms.CheckBox     chkManualTeamsKeepAlive    = null!;
+    private System.Windows.Forms.CheckBox     chkManualMouseMove         = null!;
     private System.Windows.Forms.Label        lblEveryManual        = null!;
     private System.Windows.Forms.NumericUpDown numManualFrequency   = null!;
     private System.Windows.Forms.Label        lblFreqMinManual      = null!;
@@ -99,9 +101,6 @@ partial class Main
     private System.Windows.Forms.CheckBox  chkLaunchOnStartup  = null!;
     private System.Windows.Forms.Label     lblLaunchDesc       = null!;
     private System.Windows.Forms.Panel     pnlGeneralDiv1      = null!;
-    private System.Windows.Forms.CheckBox  chkStartMinimized   = null!;
-    private System.Windows.Forms.Label     lblMinimizedDesc    = null!;
-    private System.Windows.Forms.Panel     pnlGeneralDiv2      = null!;
     private System.Windows.Forms.Label     lblDefaultModeLabel = null!;
     private System.Windows.Forms.ComboBox  cmbDefaultMode      = null!;
     private System.Windows.Forms.Label     lblDefaultModeDesc  = null!;
@@ -182,9 +181,10 @@ partial class Main
         chkMouseClick     = new System.Windows.Forms.CheckBox { Text = "Mouse click",      Location = new System.Drawing.Point(172, 9), AutoSize = true };
         chkArrowKeys      = new System.Windows.Forms.CheckBox { Text = "Arrow keys",       Location = new System.Drawing.Point(282, 9), AutoSize = true };
         chkTeamsKeepAlive = new System.Windows.Forms.CheckBox { Text = "Teams keepalive",  Location = new System.Drawing.Point(392, 9), AutoSize = true };
-        lblEveryAuto    = new System.Windows.Forms.Label { Text = "Every", Location = new System.Drawing.Point(8, 38), Size = new System.Drawing.Size(55, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
-        numFrequency    = new System.Windows.Forms.NumericUpDown { Location = new System.Drawing.Point(66, 38), Width = 50, Minimum = 1, Maximum = 60, Value = 1 };
-        lblFreqMinAuto  = new System.Windows.Forms.Label { Text = "min", Location = new System.Drawing.Point(120, 38), Size = new System.Drawing.Size(35, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        chkMouseMove      = new System.Windows.Forms.CheckBox { Text = "Mouse move",       Location = new System.Drawing.Point(66, 33), AutoSize = true };
+        lblEveryAuto    = new System.Windows.Forms.Label { Text = "Every", Location = new System.Drawing.Point(8, 57), Size = new System.Drawing.Size(55, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        numFrequency    = new System.Windows.Forms.NumericUpDown { Location = new System.Drawing.Point(66, 57), Width = 50, Minimum = 1, Maximum = 60, Value = 1 };
+        lblFreqMinAuto  = new System.Windows.Forms.Label { Text = "min", Location = new System.Drawing.Point(120, 57), Size = new System.Drawing.Size(35, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
 
         // ── Auto tab — AFTER card ─────────────────────────────────
         pnlAfter       = new System.Windows.Forms.Panel();
@@ -234,22 +234,20 @@ partial class Main
         chkManualMouseClick        = new System.Windows.Forms.CheckBox { Text = "Mouse click",     Location = new System.Drawing.Point(172, 9), AutoSize = true };
         chkManualArrowKeys         = new System.Windows.Forms.CheckBox { Text = "Arrow keys",      Location = new System.Drawing.Point(282, 9), AutoSize = true };
         chkManualTeamsKeepAlive    = new System.Windows.Forms.CheckBox { Text = "Teams keepalive", Location = new System.Drawing.Point(392, 9), AutoSize = true };
-        lblEveryManual        = new System.Windows.Forms.Label { Text = "Every", Location = new System.Drawing.Point(8, 38), Size = new System.Drawing.Size(55, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
-        numManualFrequency    = new System.Windows.Forms.NumericUpDown { Location = new System.Drawing.Point(66, 38), Width = 50, Minimum = 1, Maximum = 60, Value = 1 };
-        lblFreqMinManual      = new System.Windows.Forms.Label { Text = "min", Location = new System.Drawing.Point(120, 38), Size = new System.Drawing.Size(35, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        chkManualMouseMove         = new System.Windows.Forms.CheckBox { Text = "Mouse move",      Location = new System.Drawing.Point(66, 33), AutoSize = true };
+        lblEveryManual        = new System.Windows.Forms.Label { Text = "Every", Location = new System.Drawing.Point(8, 57), Size = new System.Drawing.Size(55, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        numManualFrequency    = new System.Windows.Forms.NumericUpDown { Location = new System.Drawing.Point(66, 57), Width = 50, Minimum = 1, Maximum = 60, Value = 1 };
+        lblFreqMinManual      = new System.Windows.Forms.Label { Text = "min", Location = new System.Drawing.Point(120, 57), Size = new System.Drawing.Size(35, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
 
         // ── General tab ───────────────────────────────────────────
-        chkLaunchOnStartup  = new System.Windows.Forms.CheckBox { Text = "Launch on Windows startup",                Location = new System.Drawing.Point(12, 14),  AutoSize = true, Font = new System.Drawing.Font("Segoe UI", 9f) };
-        lblLaunchDesc       = new System.Windows.Forms.Label    { Text = "Start SnapCqq2 automatically when you log in", Location = new System.Drawing.Point(30, 34),  Size = new System.Drawing.Size(380, 18), ForeColor = System.Drawing.Color.Gray };
-        pnlGeneralDiv1      = new System.Windows.Forms.Panel    { Location = new System.Drawing.Point(0, 58),  Height = 1, BackColor = System.Drawing.Color.LightGray };
-        chkStartMinimized   = new System.Windows.Forms.CheckBox { Text = "Start minimized to tray",               Location = new System.Drawing.Point(12, 68),  AutoSize = true, Font = new System.Drawing.Font("Segoe UI", 9f) };
-        lblMinimizedDesc    = new System.Windows.Forms.Label    { Text = "Hide the window on launch, show only the tray icon", Location = new System.Drawing.Point(30, 88),  Size = new System.Drawing.Size(380, 18), ForeColor = System.Drawing.Color.Gray };
-        pnlGeneralDiv2      = new System.Windows.Forms.Panel    { Location = new System.Drawing.Point(0, 112), Height = 1, BackColor = System.Drawing.Color.LightGray };
-        lblDefaultModeLabel = new System.Windows.Forms.Label    { Text = "Default mode on launch",                Location = new System.Drawing.Point(12, 122), Size = new System.Drawing.Size(170, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
-        cmbDefaultMode      = new System.Windows.Forms.ComboBox { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList, Location = new System.Drawing.Point(190, 122), Width = 100 };
+        chkLaunchOnStartup  = new System.Windows.Forms.CheckBox { Text = "Launch on Windows startup",                   Location = new System.Drawing.Point(12, 14), AutoSize = true, Font = new System.Drawing.Font("Segoe UI", 9f) };
+        lblLaunchDesc       = new System.Windows.Forms.Label    { Text = "Start SnapCqq2 automatically when you log in (Auto mode arms itself)", Location = new System.Drawing.Point(30, 34), Size = new System.Drawing.Size(420, 18), ForeColor = System.Drawing.Color.Gray };
+        pnlGeneralDiv1      = new System.Windows.Forms.Panel    { Location = new System.Drawing.Point(0, 58), Height = 1, BackColor = System.Drawing.Color.LightGray };
+        lblDefaultModeLabel = new System.Windows.Forms.Label    { Text = "Default mode on launch",                      Location = new System.Drawing.Point(12, 68), Size = new System.Drawing.Size(170, 23), TextAlign = System.Drawing.ContentAlignment.MiddleLeft };
+        cmbDefaultMode      = new System.Windows.Forms.ComboBox { DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList, Location = new System.Drawing.Point(190, 68), Width = 100 };
         cmbDefaultMode.Items.AddRange(new object[] { "Auto", "Manual" });
         cmbDefaultMode.SelectedIndex = 0;
-        lblDefaultModeDesc  = new System.Windows.Forms.Label    { Text = "Which tab is shown first when the app opens", Location = new System.Drawing.Point(30, 148), Size = new System.Drawing.Size(380, 18), ForeColor = System.Drawing.Color.Gray };
+        lblDefaultModeDesc  = new System.Windows.Forms.Label    { Text = "Which tab is shown first when the app opens", Location = new System.Drawing.Point(30, 94), Size = new System.Drawing.Size(380, 18), ForeColor = System.Drawing.Color.Gray };
 
         // ═══════════════════════════════════════════════════════════
         // Assembly
@@ -302,7 +300,7 @@ partial class Main
 
         pnlHowBody.Controls.AddRange(new System.Windows.Forms.Control[] {
             lblActionsLabel, chkScrollLock, chkMouseClick, chkArrowKeys, chkTeamsKeepAlive,
-            lblEveryAuto, numFrequency, lblFreqMinAuto });
+            chkMouseMove, lblEveryAuto, numFrequency, lblFreqMinAuto });
         pnlHowBody.Dock      = System.Windows.Forms.DockStyle.Fill;
         pnlHowBody.BackColor = cardBg;
         pnlHowBody.Visible   = false;
@@ -379,7 +377,7 @@ partial class Main
         pnlManualHowBody.Controls.AddRange(new System.Windows.Forms.Control[] {
             lblManualActionsLabel, chkManualScrollLock, chkManualMouseClick,
             chkManualArrowKeys, chkManualTeamsKeepAlive,
-            lblEveryManual, numManualFrequency, lblFreqMinManual });
+            chkManualMouseMove, lblEveryManual, numManualFrequency, lblFreqMinManual });
         pnlManualHowBody.Dock      = System.Windows.Forms.DockStyle.Fill;
         pnlManualHowBody.BackColor = cardBg;
         pnlManualHowBody.Visible   = false;
@@ -393,11 +391,9 @@ partial class Main
 
         // ── General tab ───────────────────────────────────────────
         pnlGeneralDiv1.Width = tabGeneral.Width;
-        pnlGeneralDiv2.Width = tabGeneral.Width;
         tabGeneral.Controls.AddRange(new System.Windows.Forms.Control[] {
             chkLaunchOnStartup, lblLaunchDesc,
-            pnlGeneralDiv1, chkStartMinimized, lblMinimizedDesc,
-            pnlGeneralDiv2, lblDefaultModeLabel, cmbDefaultMode, lblDefaultModeDesc });
+            pnlGeneralDiv1, lblDefaultModeLabel, cmbDefaultMode, lblDefaultModeDesc });
         tabGeneral.BackColor = System.Drawing.Color.FromArgb(240, 240, 240);
 
         // ── TabControl ────────────────────────────────────────────
