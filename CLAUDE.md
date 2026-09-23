@@ -27,5 +27,5 @@ If the app is running and locks the Debug exe, use `-c Release` for tests.
 
 - Commit messages: short single-line only
 - New services go in `SnapCqq2/Services/`
-- Settings shared between Auto and Manual tabs: add to `AppSettings`, load in `LoadSettingsToUI`, save in both `SaveFromAutoUI` and `SaveFromManualUI`, sync the cross-tab controls in `SaveFromManualUI`, wire `CheckedChanged`/`ValueChanged` in `WireEvents`
-- UI controls: declare in `Main.UI.cs` field list, instantiate in `BuildUI()`, add to the relevant panel's `Controls.AddRange`
+- New settings: add to `AppSettings`, load in `LoadSettingsToUI`, save in `SaveFromUI`, wire `CheckedChanged`/`ValueChanged` to `Setting_Changed` in `WireEvents`, and update the row text in `SettingsSummary` if it should show when collapsed
+- UI controls: declare in `Main.UI.cs` field list, instantiate in `BuildUI()`, add to the relevant row body's `Controls.AddRange`. Positions are 96-DPI units wrapped in `S()` (form uses `AutoScaleMode.None`)

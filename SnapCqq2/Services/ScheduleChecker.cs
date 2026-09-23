@@ -10,9 +10,7 @@ public static class ScheduleChecker
     /// </summary>
     public static bool IsInActiveWindow(AppSettings s, DateTime now)
     {
-        // DayOfWeek: Sun=0 Mon=1 … Sat=6 → remap to Mon=0 … Sun=6
-        int idx = ((int)now.DayOfWeek + 6) % 7;
-        if (!s.ActiveDays[idx]) return false;
+        if (!IsActiveDay(s, now)) return false;
 
         var t = TimeOnly.FromDateTime(now);
         if (t < s.WorkStart || t >= s.WorkEnd) return false;
@@ -21,23 +19,42 @@ public static class ScheduleChecker
         return true;
     }
 
+    /// <summary>True during the break on an active day, inside work hours.</summary>
+    public static bool IsOnBreak(AppSettings s, DateTime now)
+    {
+        if (!IsActiveDay(s, now)) return false;
+        var t = TimeOnly.FromDateTime(now);
+        return t >= s.WorkStart && t < s.WorkEnd && t >= s.BreakStart && t < s.BreakEnd;
+    }
+
     /// <summary>
-    /// Returns a human-readable "Next: day HH:mm" string for the status bar
-    /// when the scheduler is armed but currently outside the active window.
+    /// Next moment the schedule becomes active (work start or break end), or null if no day is active.
     /// </summary>
-    public static string NextWindowDescription(AppSettings s, DateTime now)
+    public static DateTime? NextWindowStart(AppSettings s, DateTime now)
     {
         for (int d = 0; d < 8; d++)
         {
-            var candidate = now.AddDays(d);
-            int idx = ((int)candidate.DayOfWeek + 6) % 7;
-            if (!s.ActiveDays[idx]) continue;
+            var date = now.Date.AddDays(d);
+            if (!IsActiveDay(s, date)) continue;
 
-            var start = candidate.Date + s.WorkStart.ToTimeSpan();
-            if (d == 0 && now >= start) continue; // today's window already started (or is in break)
-
-            return $"Next: {start:ddd HH:mm}";
+            foreach (var t in new[] { s.WorkStart, s.BreakEnd })
+            {
+                var candidate = date + t.ToTimeSpan();
+                if (candidate > now && IsInActiveWindow(s, candidate)) return candidate;
+            }
         }
-        return "No schedule configured";
+        return null;
     }
+
+    /// <summary>End of today's work hours if today is active and it hasn't passed yet; otherwise null.</summary>
+    public static DateTime? WorkEndToday(AppSettings s, DateTime now)
+    {
+        if (!IsActiveDay(s, now)) return null;
+        var end = now.Date + s.WorkEnd.ToTimeSpan();
+        return now < end ? end : null;
+    }
+
+    // DayOfWeek: Sun=0 Mon=1 … Sat=6 → remap to Mon=0 … Sun=6
+    private static bool IsActiveDay(AppSettings s, DateTime date) =>
+        s.ActiveDays[((int)date.DayOfWeek + 6) % 7];
 }

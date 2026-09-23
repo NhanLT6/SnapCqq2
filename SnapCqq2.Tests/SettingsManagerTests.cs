@@ -1,4 +1,4 @@
-using SnapCqq2.Models;
+﻿using SnapCqq2.Models;
 using SnapCqq2.Services;
 
 namespace SnapCqq2.Tests;
@@ -38,7 +38,9 @@ public class SettingsManagerTests : IDisposable
             IdleThresholdMinutes = 7,
             WorkStart = new TimeOnly(8, 30),
             UseMouseClick = true,
-            DefaultMode = "Manual"
+            AutoEnabled = false,
+            QuickRunMinutes = 90,
+            EndActionSkippedOn = new DateOnly(2026, 9, 23)
         };
 
         SettingsManager.Save(original);
@@ -47,7 +49,19 @@ public class SettingsManagerTests : IDisposable
         Assert.Equal(7, loaded.IdleThresholdMinutes);
         Assert.Equal(new TimeOnly(8, 30), loaded.WorkStart);
         Assert.True(loaded.UseMouseClick);
-        Assert.Equal("Manual", loaded.DefaultMode);
+        Assert.False(loaded.AutoEnabled);
+        Assert.Equal(90, loaded.QuickRunMinutes);
+        Assert.Equal(new DateOnly(2026, 9, 23), loaded.EndActionSkippedOn);
+    }
+
+    [Fact]
+    public void Load_IgnoresRemovedManualModeFields()
+    {
+        File.WriteAllText(SettingsManager.FilePath,
+            """{ "IdleThresholdMinutes": 2, "DefaultMode": "Manual", "ManualTimeoutAction": "CloseApp" }""");
+        var s = SettingsManager.Load();
+        Assert.Equal(2, s.IdleThresholdMinutes);
+        Assert.True(s.AutoEnabled);
     }
 
     [Fact]

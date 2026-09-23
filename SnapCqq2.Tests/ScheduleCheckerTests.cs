@@ -1,4 +1,4 @@
-using SnapCqq2.Models;
+﻿using SnapCqq2.Models;
 using SnapCqq2.Services;
 
 namespace SnapCqq2.Tests;
@@ -72,5 +72,48 @@ public class ScheduleCheckerTests
         // 18:00 is >= WorkEnd so not in active window
         var result = ScheduleChecker.IsInActiveWindow(DefaultSettings(), At(DayOfWeek.Monday, 18, 0));
         Assert.False(result);
+    }
+
+    [Fact]
+    public void NextWindowStart_DuringBreak_ReturnsBreakEnd()
+    {
+        var now = At(DayOfWeek.Wednesday, 12, 30);
+        Assert.Equal(now.Date.AddHours(13), ScheduleChecker.NextWindowStart(DefaultSettings(), now));
+    }
+
+    [Fact]
+    public void NextWindowStart_FridayEvening_ReturnsMondayMorning()
+    {
+        var now = At(DayOfWeek.Friday, 19);
+        Assert.Equal(now.Date.AddDays(3).AddHours(9), ScheduleChecker.NextWindowStart(DefaultSettings(), now));
+    }
+
+    [Fact]
+    public void NextWindowStart_NoActiveDays_ReturnsNull()
+    {
+        var s = new AppSettings { ActiveDays = new bool[7] };
+        Assert.Null(ScheduleChecker.NextWindowStart(s, At(DayOfWeek.Monday, 10)));
+    }
+
+    [Fact]
+    public void IsOnBreak_TrueOnlyDuringBreakOnActiveDay()
+    {
+        Assert.True(ScheduleChecker.IsOnBreak(DefaultSettings(), At(DayOfWeek.Wednesday, 12, 15)));
+        Assert.False(ScheduleChecker.IsOnBreak(DefaultSettings(), At(DayOfWeek.Wednesday, 13)));
+        Assert.False(ScheduleChecker.IsOnBreak(DefaultSettings(), At(DayOfWeek.Saturday, 12, 15)));
+    }
+
+    [Fact]
+    public void WorkEndToday_BeforeEnd_ReturnsTodaysEnd()
+    {
+        var now = At(DayOfWeek.Tuesday, 17, 59);
+        Assert.Equal(now.Date.AddHours(18), ScheduleChecker.WorkEndToday(DefaultSettings(), now));
+    }
+
+    [Fact]
+    public void WorkEndToday_AfterEndOrInactiveDay_ReturnsNull()
+    {
+        Assert.Null(ScheduleChecker.WorkEndToday(DefaultSettings(), At(DayOfWeek.Tuesday, 18)));
+        Assert.Null(ScheduleChecker.WorkEndToday(DefaultSettings(), At(DayOfWeek.Sunday, 10)));
     }
 }

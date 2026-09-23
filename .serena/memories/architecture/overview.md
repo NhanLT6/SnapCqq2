@@ -7,8 +7,10 @@ A Windows Forms (.NET 8) tray application that simulates user activity to preven
 - `SnapCqq2.Tests/` — xUnit test project
 
 ## Key files
-- `SnapCqq2/Main.cs` — core state machine, timers, action dispatch
-- `SnapCqq2/Main.UI.cs` — UI construction helpers
+- `SnapCqq2/Main.cs` — state, engine timer, commands, menus, action dispatch
+- `SnapCqq2/QuickRunDialog.cs` — "Run for…" dialog (duration, delay, when done)
+- `SnapCqq2/app.ico` — flat mid-grey squircle cup icon (ApplicationIcon + form icon in Main.resx)
+- `SnapCqq2/Main.UI.cs` — UI construction: status area + split button, Schedule/Actions/At end accordion rows, footer
 - `SnapCqq2/Main.Designer.cs` — designer-generated control declarations
 - `SnapCqq2/Program.cs` — entry point
 - `SnapCqq2/Models/AppSettings.cs` — settings model

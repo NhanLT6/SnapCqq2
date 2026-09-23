@@ -1,24 +1,21 @@
 # Settings (AppSettings.cs + SettingsManager.cs)
 
-Persisted as JSON via `SettingsManager` (path in `SettingsManager.FilePath`).
+Persisted as JSON via `SettingsManager` (%APPDATA%\SnapCqq2\settings.json). Unknown keys (old Manual-mode fields, DefaultMode) are ignored on load.
 
-## AppSettings fields (key ones)
-- `ActiveDays[7]` — bool array, Mon–Sun
-- `WorkStart`, `WorkEnd`, `BreakStart`, `BreakEnd` — `TimeOnly`
-- `IdleThresholdMinutes` — int
-- `StopWhenUserReturns` — bool
-- `UseScrollLock`, `UseMouseClick`, `UseArrowKeys` — bool (shared between Auto and Manual tabs)
-- `FrequencyMinutes` — int (shared)
-- `AutoTimeoutAction` / `ManualTimeoutAction` — `TimeoutAction` enum
-- `ManualDurationMinutes`, `ManualDelayMinutes` — int
-- `StartMinimized` — bool
-- `DefaultMode` — string ("Auto" or "Manual")
+## AppSettings fields
+- `ActiveDays[7]` (Mon–Sun), `WorkStart`, `WorkEnd`, `BreakStart`, `BreakEnd` — `TimeOnly`
+- `IdleThresholdMinutes`, `StopWhenUserReturns`
+- `UseMouseMove`, `UseTeamsKeepAlive`, `UseScrollLock`, `UseMouseClick`, `UseArrowKeys`, `FrequencyMinutes`
+- `AutoEnabled` — schedule on/off
+- `AutoTimeoutAction` — end-of-work-hours action; `EndActionSkippedOn` (DateOnly?) — "Skip today"
+- `QuickRunMinutes` (0 = until stopped), `QuickRunEndAction`
+- `LaunchOnStartup` (legacy; `StartupManager` is the source of truth)
 
-## TimeoutAction enum values
-`DoNothing`, `CloseApp`, `LockAndClose`, `ShutdownWindows`
+## TimeoutAction enum
+`DoNothing`, `CloseApp` (legacy, treated as DoNothing), `LockAndClose`, `ShutdownWindows`
+
+## UI binding
+`LoadSettingsToUI` / `SaveFromUI` / `Setting_Changed` (guarded by `_loading`). Collapsed row text comes from `SettingsSummary`.
 
 ## First-run behaviour
 If settings file doesn't exist: startup is enabled automatically, defaults saved immediately.
-
-## UI sync pattern
-`_loading = true` guard used in `LoadSettingsToUI()` and cross-tab sync in `SaveFromManualUI()` to prevent save-on-change handlers firing during programmatic population.

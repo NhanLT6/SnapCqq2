@@ -3,7 +3,7 @@ namespace SnapCqq2.Models;
 public enum TimeoutAction
 {
     DoNothing,
-    CloseApp,
+    CloseApp,        // legacy (old Manual mode) — treated as DoNothing
     LockAndClose,
     ShutdownWindows
 }
@@ -21,7 +21,7 @@ public class AppSettings
     public int  IdleThresholdMinutes { get; set; } = 4;
     public bool StopWhenUserReturns  { get; set; } = true;
 
-    // Shared: actions + frequency (apply to both Auto and Manual modes)
+    // Actions + frequency (shared by schedule and quick runs)
     public bool UseScrollLock      { get; set; } = true;
     public bool UseMouseClick      { get; set; } = false;
     public bool UseArrowKeys       { get; set; } = false;
@@ -29,15 +29,17 @@ public class AppSettings
     public bool UseMouseMove       { get; set; } = false;
     public int  FrequencyMinutes   { get; set; } = 1;
 
-    // Auto: what happens when the schedule window ends
-    public TimeoutAction AutoTimeoutAction { get; set; } = TimeoutAction.DoNothing;
+    // Schedule on/off — survives restarts
+    public bool AutoEnabled { get; set; } = true;
 
-    // Manual
-    public int           ManualDurationMinutes { get; set; } = 30;
-    public int           ManualDelayMinutes    { get; set; } = 0;
-    public TimeoutAction ManualTimeoutAction   { get; set; } = TimeoutAction.CloseApp;
+    // What happens at the end of work hours if the user is away
+    public TimeoutAction AutoTimeoutAction { get; set; } = TimeoutAction.DoNothing;
+    public DateOnly?     EndActionSkippedOn { get; set; }
+
+    // Quick run ("Run now") — last used duration (0 = until stopped) and what happens after
+    public int           QuickRunMinutes   { get; set; } = 60;
+    public TimeoutAction QuickRunEndAction { get; set; } = TimeoutAction.DoNothing;
 
     // General
-    public bool   LaunchOnStartup { get; set; } = true;
-    public string DefaultMode     { get; set; } = "Auto"; // "Auto" or "Manual"
+    public bool LaunchOnStartup { get; set; } = true;
 }
