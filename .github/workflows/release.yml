@@ -34,14 +34,21 @@ jobs:
           dotnet publish SnapCqq2/SnapCqq2.csproj -p:PublishProfile=FolderProfile -p:Version=$version -o out/sc
           dotnet publish SnapCqq2/SnapCqq2.csproj -p:PublishProfile=FrameworkDependent -p:Version=$version -o out/fd
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item out/sc/SnapCqq2.exe "dist/SnapCqq2-$env:TAG-win-x64.exe"
-          Copy-Item out/fd/SnapCqq2.exe "dist/SnapCqq2-$env:TAG-win-x64-net8-runtime.exe"
+          Copy-Item out/sc/SnapCqq2.exe "dist/SnapCqq2-$env:TAG-standalone.exe"
+          Copy-Item out/fd/SnapCqq2.exe "dist/SnapCqq2-$env:TAG-requires-dotnet8.exe"
 
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.TAG }}
           generate_release_notes: true
+          fail_on_unmatched_files: true
           files: dist/*.exe
           body: |
-            - `SnapCqq2-${{ env.TAG }}-win-x64.exe`: self-contained, runs without installing .NET.
-            - `SnapCqq2-${{ env.TAG }}-win-x64-net8-runtime.exe`: smaller, requires [.NET 8 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/8.0).
+            ## Download
+
+            | File | Size | Use when |
+            |---|---|---|
+            | **`SnapCqq2-${{ env.TAG }}-standalone.exe`** | ~70 MB | Recommended. Download and run, nothing to install. |
+            | `SnapCqq2-${{ env.TAG }}-requires-dotnet8.exe` | ~0.3 MB | You already have [.NET 8 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/8.0) installed. |
+
+            Windows 10/11 x64. Ignore the "Source code" archives below; GitHub adds them automatically.
